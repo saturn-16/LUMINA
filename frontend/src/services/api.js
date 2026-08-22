@@ -1,11 +1,18 @@
 import axios from 'axios';
 
-const defaultBaseUrl = typeof window !== 'undefined' && window.location.hostname.includes('vercel.app')
-  ? 'https://lumina-16hr.onrender.com/api'
-  : '/api';
+let configuredUrl = import.meta.env.VITE_API_URL || (
+  typeof window !== 'undefined' && window.location.hostname.includes('vercel.app')
+    ? 'https://lumina-16hr.onrender.com/api'
+    : '/api'
+);
+
+// If URL points to remote backend and doesn't end with /api, append /api
+if (configuredUrl.startsWith('http') && !configuredUrl.endsWith('/api') && !configuredUrl.endsWith('/api/')) {
+  configuredUrl = configuredUrl.replace(/\/+$/, '') + '/api';
+}
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || defaultBaseUrl,
+  baseURL: configuredUrl,
   headers: {
     'Content-Type': 'application/json',
   },

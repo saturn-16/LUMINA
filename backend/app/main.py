@@ -64,7 +64,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include API Routers
+# Include API Routers (support both /api prefix and root for flexible client base URLs)
 app.include_router(auth_router, prefix="/api")
 app.include_router(events_router, prefix="/api")
 app.include_router(shows_router, prefix="/api")
@@ -75,13 +75,25 @@ app.include_router(organiser_router, prefix="/api")
 app.include_router(admin_router, prefix="/api")
 app.include_router(ws_router)
 
+# Also expose without /api prefix
+app.include_router(auth_router)
+app.include_router(events_router)
+app.include_router(shows_router)
+app.include_router(holds_router)
+app.include_router(bookings_router)
+app.include_router(waitlist_router)
+app.include_router(organiser_router)
+app.include_router(admin_router)
+
 
 @app.get("/api/health", tags=["Health"])
+@app.get("/health", tags=["Health"])
 async def health_check():
     return {"status": "healthy", "project": settings.PROJECT_NAME}
 
 
 @app.get("/api/venues", tags=["Venues"])
+@app.get("/venues", tags=["Venues"])
 async def list_venues_all(db: AsyncSession = Depends(get_db)):
     from sqlalchemy import select
     from sqlalchemy.orm import selectinload
