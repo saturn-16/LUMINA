@@ -25,15 +25,25 @@ async def list_organiser_events(
     db: AsyncSession = Depends(get_db),
 ):
     """List all events created by the authenticated organiser."""
-    stmt = (
-        select(Event)
-        .where(Event.organiser_id == current_user.id)
-        .options(
-            selectinload(Event.shows).joinedload(Show.venue),
-            selectinload(Event.shows).selectinload(Show.pricing),
+    if current_user.role == "ADMIN":
+        stmt = (
+            select(Event)
+            .options(
+                selectinload(Event.shows).joinedload(Show.venue),
+                selectinload(Event.shows).selectinload(Show.pricing),
+            )
+            .order_by(Event.created_at.desc())
         )
-        .order_by(Event.created_at.desc())
-    )
+    else:
+        stmt = (
+            select(Event)
+            .where(Event.organiser_id == current_user.id)
+            .options(
+                selectinload(Event.shows).joinedload(Show.venue),
+                selectinload(Event.shows).selectinload(Show.pricing),
+            )
+            .order_by(Event.created_at.desc())
+        )
     result = await db.execute(stmt)
     events = result.scalars().all()
 
@@ -131,6 +141,28 @@ async def update_event(
     return evt
 
 
+@router.delete("/events/{event_id}", status_code=status.HTTP_200_OK)
+async def delete_event(
+    event_id: int,
+    current_user: User = Depends(require_role(["ORGANISER", "ADMIN"])),
+    db: AsyncSession = Depends(get_db),
+):
+    """Delete an organiser event and associated shows/seats."""
+    stmt = select(Event).where(Event.id == event_id)
+    res = await db.execute(stmt)
+    evt = res.scalar_one_or_none()
+
+    if not evt:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Event not found.")
+
+    if current_user.role != "ADMIN" and evt.organiser_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied.")
+
+    await db.delete(evt)
+    await db.commit()
+    return {"message": f"Event '{evt.title}' deleted successfully."}
+
+
 @router.post("/shows", status_code=status.HTTP_201_CREATED)
 async def create_show(
     payload: ShowCreate,
@@ -226,15 +258,25 @@ async def get_organiser_analytics(
     Retrieve booking summaries and revenue metrics per event and show for the organiser.
     """
     # Fetch organiser's events with shows, bookings, and seats
-    stmt = (
-        select(Event)
-        .where(Event.organiser_id == current_user.id)
-        .options(
-            selectinload(Event.shows).joinedload(Show.venue),
-            selectinload(Event.shows).selectinload(Show.seats),
-            selectinload(Event.shows).selectinload(Show.bookings).selectinload(Booking.seats),
+    if current_user.role == "ADMIN":
+        stmt = (
+            select(Event)
+            .options(
+                selectinload(Event.shows).joinedload(Show.venue),
+                selectinload(Event.shows).selectinload(Show.seats),
+                selectinload(Event.shows).selectinload(Show.bookings).selectinload(Booking.seats),
+            )
         )
-    )
+    else:
+        stmt = (
+            select(Event)
+            .where(Event.organiser_id == current_user.id)
+            .options(
+                selectinload(Event.shows).joinedload(Show.venue),
+                selectinload(Event.shows).selectinload(Show.seats),
+                selectinload(Event.shows).selectinload(Show.bookings).selectinload(Booking.seats),
+            )
+        )
     result = await db.execute(stmt)
     events = result.scalars().all()
 

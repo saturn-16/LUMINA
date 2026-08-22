@@ -1,10 +1,11 @@
 import asyncio
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.core.config import settings
-from backend.app.core.database import async_engine, Base
+from backend.app.core.database import async_engine, Base, get_db
 from backend.app.workers.expiry_worker import run_expiry_cleanup_loop
 import backend.app.models  # ensure all models are registered
 
@@ -77,6 +78,38 @@ app.include_router(ws_router)
 @app.get("/api/health", tags=["Health"])
 async def health_check():
     return {"status": "healthy", "project": settings.PROJECT_NAME}
+
+
+@app.get("/api/venues", tags=["Venues"])
+async def list_venues_all(db: AsyncSession = Depends(get_db)):
+    from sqlalchemy import select
+    from sqlalchemy.orm import selectinload
+    from backend.app.models.venue import Venue
+    stmt = select(Venue).options(selectinload(Venue.categories)).order_by(Venue.name.asc())
+    result = await db.execute(stmt)
+    venues = result.scalars().all()
+    return [
+        {
+            "id": v.id,
+            "name": v.name,
+            "address": v.address,
+            "city": v.city,
+            "total_rows": v.total_rows,
+            "total_cols": v.total_cols,
+            "created_at": v.created_at.isoformat() if v.created_at else None,
+            "categories": [
+                {
+                    "id": c.id,
+                    "venue_id": c.venue_id,
+                    "name": c.name,
+                    "color_code": c.color_code,
+                    "tier_level": c.tier_level,
+                }
+                for c in (v.categories or [])
+            ],
+        }
+        for v in venues
+    ]
 
 
 @app.get("/", tags=["Root"])
