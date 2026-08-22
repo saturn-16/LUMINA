@@ -35,13 +35,19 @@ export default function CustomerDashboard() {
     try {
       setLoading(true);
       const [bookingsRes, waitlistsRes] = await Promise.all([
-        api.get('/bookings/my'),
-        api.get('/waitlist'),
+        api.get('/bookings'),
+        api.get('/waitlist').catch(() => ({ data: [] })),
       ]);
-      setBookings(bookingsRes.data || []);
-      setWaitlists(waitlistsRes.data || []);
+      setBookings(Array.isArray(bookingsRes.data) ? bookingsRes.data : []);
+      setWaitlists(Array.isArray(waitlistsRes.data) ? waitlistsRes.data : []);
     } catch (err) {
-      console.error('Failed to load dashboard data', err);
+      console.error('Failed to load dashboard data via /bookings, trying /bookings/my', err);
+      try {
+        const altRes = await api.get('/bookings/my');
+        setBookings(Array.isArray(altRes.data) ? altRes.data : []);
+      } catch (e) {
+        console.error('Alt fetch failed', e);
+      }
     } finally {
       setLoading(false);
     }
@@ -85,12 +91,15 @@ export default function CustomerDashboard() {
     return `₹${Math.round(val).toLocaleString('en-IN')}`;
   };
 
-  // Split bookings into upcoming vs past / cancelled
-  const now = new Date();
-  const activeBookings = bookings.filter((b) => b.status === 'CONFIRMED');
-  const pastOrCancelledBookings = bookings.filter(
-    (b) => b.status === 'CANCELLED' || new Date(b.show_start_time) < now
-  );
+  // Sort bookings so newest confirmed booking is immediately the top primary focus
+  const sortedBookings = [...bookings].sort((a, b) => {
+    const timeA = new Date(a.created_at || a.show_start_time || 0).getTime();
+    const timeB = new Date(b.created_at || b.show_start_time || 0).getTime();
+    return timeB - timeA;
+  });
+
+  const activeBookings = sortedBookings.filter((b) => b.status === 'CONFIRMED');
+  const pastOrCancelledBookings = sortedBookings.filter((b) => b.status === 'CANCELLED');
 
   const primaryUpcoming = activeBookings.length > 0 ? activeBookings[0] : null;
   const secondaryUpcoming = activeBookings.length > 1 ? activeBookings.slice(1) : [];

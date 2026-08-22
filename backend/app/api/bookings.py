@@ -36,6 +36,7 @@ async def complete_booking(
 
 
 @router.get("", response_model=List[BookingResponse])
+@router.get("/my", response_model=List[BookingResponse])
 async def list_user_bookings(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
