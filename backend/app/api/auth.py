@@ -75,6 +75,42 @@ async def login_user(payload: UserLogin, db: AsyncSession = Depends(get_db)):
     )
 
 
+@router.post("/firebase-login", response_model=TokenResponse)
+@router.post("/social-login", response_model=TokenResponse)
+async def firebase_login_user(payload: FirebaseSocialLogin, db: AsyncSession = Depends(get_db)):
+    """Authenticate or auto-provision a Google/Firebase authenticated user and issue a Lumina JWT."""
+    email_clean = payload.email.lower().strip()
+    stmt = select(User).where(User.email == email_clean)
+    result = await db.execute(stmt)
+    user = result.scalar_one_or_none()
+
+    if not user:
+        role = payload.role.upper() if payload.role else "CUSTOMER"
+        if role not in ["CUSTOMER", "ORGANISER", "ADMIN"]:
+            role = "CUSTOMER"
+
+        user = User(
+            email=email_clean,
+            password_hash=get_password_hash("social_login_firebase_oauth"),
+            full_name=payload.full_name.strip() if payload.full_name else email_clean.split("@")[0],
+            role=role,
+            created_at=datetime.now(timezone.utc),
+        )
+        db.add(user)
+        await db.commit()
+        await db.refresh(user)
+
+    token = create_access_token(subject=user.id, role=user.role)
+    return TokenResponse(
+        access_token=token,
+        token_type="bearer",
+        user_id=user.id,
+        email=user.email,
+        full_name=user.full_name,
+        role=user.role,
+    )
+
+
 @router.get("/me", response_model=UserResponse)
 async def get_current_user_profile(current_user: User = Depends(get_current_user)):
     """Retrieve profile of current authenticated user."""

@@ -15,6 +15,13 @@ class UserLogin(BaseModel):
     password: str
 
 
+class FirebaseSocialLogin(BaseModel):
+    email: EmailStr
+    full_name: Optional[str] = "Lumina User"
+    photo_url: Optional[str] = None
+    role: Optional[str] = "CUSTOMER"
+
+
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"

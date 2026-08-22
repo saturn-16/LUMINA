@@ -27,22 +27,35 @@ export function AuthProvider({ children }) {
   });
   const [loading, setLoading] = useState(true);
 
-  // Listen to Firebase auth state if configured
+  // Listen to Firebase auth state and ensure backend JWT token is always active
   useEffect(() => {
     let unsubscribe = () => {};
     if (auth) {
       try {
-        unsubscribe = onAuthStateChanged(auth, (fbUser) => {
+        unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
           if (fbUser) {
-            const userData = {
-              id: fbUser.uid,
-              email: fbUser.email,
-              full_name: fbUser.displayName || fbUser.email?.split('@')[0] || 'Lumina User',
-              role: fbUser.email?.includes('admin') ? 'ADMIN' : fbUser.email?.includes('organiser') ? 'ORGANISER' : 'CUSTOMER',
-              photo_url: fbUser.photoURL || null,
-            };
-            setUser(userData);
-            localStorage.setItem('lumina_user', JSON.stringify(userData));
+            const currentToken = localStorage.getItem('token');
+            if (!currentToken) {
+              try {
+                const res = await api.post('/auth/firebase-login', {
+                  email: fbUser.email,
+                  full_name: fbUser.displayName || fbUser.email?.split('@')[0],
+                  photo_url: fbUser.photoURL || null,
+                  role: fbUser.email?.includes('admin') ? 'ADMIN' : fbUser.email?.includes('organiser') ? 'ORGANISER' : 'CUSTOMER',
+                });
+                const { access_token, user_id, email, full_name, role } = res.data;
+                localStorage.setItem('token', access_token);
+                setToken(access_token);
+                const userData = { id: user_id, email, full_name, role, photo_url: fbUser.photoURL || null };
+                localStorage.setItem('lumina_user', JSON.stringify(userData));
+                setUser(userData);
+              } catch (err) {
+                console.warn('Silent JWT exchange error:', err);
+              }
+            } else {
+              const savedUser = localStorage.getItem('lumina_user');
+              if (savedUser) setUser(JSON.parse(savedUser));
+            }
           }
           setLoading(false);
         });
@@ -103,18 +116,37 @@ export function AuthProvider({ children }) {
       const result = await signInWithPopup(auth, googleProvider);
       const fbUser = result.user;
       
-      const userData = {
-        id: fbUser.uid,
+      const payload = {
         email: fbUser.email,
         full_name: fbUser.displayName || 'Lumina Member',
-        role: fbUser.email?.includes('admin') ? 'ADMIN' : fbUser.email?.includes('organiser') ? 'ORGANISER' : role,
         photo_url: fbUser.photoURL || null,
+        role: fbUser.email?.includes('admin') ? 'ADMIN' : fbUser.email?.includes('organiser') ? 'ORGANISER' : role,
       };
 
-      setUser(userData);
-      localStorage.setItem('lumina_user', JSON.stringify(userData));
-      localStorage.setItem('lumina_saved_email', fbUser.email);
-      return userData;
+      try {
+        const res = await api.post('/auth/firebase-login', payload);
+        const { access_token, user_id, email, full_name, role: userRole } = res.data;
+        localStorage.setItem('token', access_token);
+        setToken(access_token);
+
+        const userData = { id: user_id, email, full_name, role: userRole, photo_url: fbUser.photoURL || null };
+        setUser(userData);
+        localStorage.setItem('lumina_user', JSON.stringify(userData));
+        localStorage.setItem('lumina_saved_email', fbUser.email);
+        return userData;
+      } catch (backendErr) {
+        console.warn('Backend sync failed, using client auth:', backendErr);
+        const fallbackUser = {
+          id: fbUser.uid,
+          email: fbUser.email,
+          full_name: fbUser.displayName || 'Lumina Member',
+          role: payload.role,
+          photo_url: fbUser.photoURL || null,
+        };
+        setUser(fallbackUser);
+        localStorage.setItem('lumina_user', JSON.stringify(fallbackUser));
+        return fallbackUser;
+      }
     } catch (err) {
       console.error('Google Sign-In Error:', err);
       throw err;
