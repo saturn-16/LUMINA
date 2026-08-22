@@ -5,10 +5,9 @@ import qrcode
 from typing import Dict, Any
 
 
-def generate_qr_code_data_uri(payload: Dict[str, Any]) -> str:
+def generate_qr_code_bytes(payload: Dict[str, Any]) -> bytes:
     """
-    Generate a server-side QR code from a dictionary payload.
-    Returns a base64-encoded PNG data URI string: 'data:image/png;base64,...'
+    Generate raw PNG bytes for server-side QR code.
     """
     json_str = json.dumps(payload, sort_keys=True)
     
@@ -25,7 +24,14 @@ def generate_qr_code_data_uri(payload: Dict[str, Any]) -> str:
     
     buffer = io.BytesIO()
     img.save(buffer, format="PNG")
-    qr_bytes = buffer.getvalue()
-    
+    return buffer.getvalue()
+
+
+def generate_qr_code_data_uri(payload: Dict[str, Any]) -> str:
+    """
+    Generate a server-side QR code from a dictionary payload.
+    Returns a base64-encoded PNG data URI string: 'data:image/png;base64,...'
+    """
+    qr_bytes = generate_qr_code_bytes(payload)
     base64_encoded = base64.b64encode(qr_bytes).decode("utf-8")
     return f"data:image/png;base64,{base64_encoded}"

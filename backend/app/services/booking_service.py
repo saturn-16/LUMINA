@@ -15,7 +15,7 @@ from backend.app.models.seat import ShowSeat, VenueSeat, SeatCategory
 from backend.app.models.show import Show, ShowPricing
 from backend.app.models.user import User
 from backend.app.services.email_service import EmailService
-from backend.app.services.qr_service import generate_qr_code_data_uri
+from backend.app.services.qr_service import generate_qr_code_data_uri, generate_qr_code_bytes
 from backend.app.services.waitlist_service import WaitlistService
 
 
@@ -145,6 +145,7 @@ class BookingService:
             "total_amount": round(total_amount, 2),
         }
         qr_data_uri = generate_qr_code_data_uri(qr_payload)
+        qr_png_bytes = generate_qr_code_bytes(qr_payload)
 
         # 8. Insert Booking & BookingSeats
         booking = Booking(
@@ -179,7 +180,7 @@ class BookingService:
 
         await db.commit()
 
-        # 9. Send confirmation email
+        # 9. Send confirmation email directly to registered address
         EmailService.send_booking_confirmation(
             to_email=user.email,
             customer_name=user.full_name,
@@ -190,6 +191,7 @@ class BookingService:
             seats_str=", ".join(seat_descriptions),
             total_amount=round(total_amount, 2),
             qr_code_data_uri=qr_data_uri,
+            qr_png_bytes=qr_png_bytes,
         )
 
         # 10. Broadcast real-time update
@@ -394,4 +396,52 @@ class BookingService:
             "customer_name": b.user.full_name,
             "customer_email": b.user.email,
             "seats": seats_data,
+        }
+
+    @classmethod
+    async def resend_booking_confirmation(
+        cls, db: AsyncSession, booking_reference: str, user: User
+    ) -> Dict[str, Any]:
+        """Resend booking confirmation ticket email with QR code to the registered email."""
+        booking_data = await cls.get_booking_by_reference(db, booking_reference, user)
+        
+        seat_descs = [
+            f"{s['row_label']}{s['seat_number']} ({s['category_name']})"
+            for s in booking_data["seats"]
+        ]
+        
+        qr_payload = {
+            "ref": booking_data["booking_reference"],
+            "event": booking_data["event_title"],
+            "venue": booking_data["venue_name"],
+            "show_time": booking_data["show_start_time"].isoformat() if hasattr(booking_data["show_start_time"], "isoformat") else str(booking_data["show_start_time"]),
+            "customer": booking_data["customer_email"],
+            "seats": [f"{s['row_label']}{s['seat_number']}" for s in booking_data["seats"]],
+            "total_amount": round(booking_data["total_amount"], 2),
+        }
+        qr_png_bytes = generate_qr_code_bytes(qr_payload)
+
+        show_time_str = (
+            booking_data["show_start_time"].strftime("%a, %b %d, %Y at %I:%M %p")
+            if hasattr(booking_data["show_start_time"], "strftime")
+            else str(booking_data["show_start_time"])
+        )
+
+        EmailService.send_booking_confirmation(
+            to_email=booking_data["customer_email"],
+            customer_name=booking_data["customer_name"],
+            booking_reference=booking_data["booking_reference"],
+            event_title=booking_data["event_title"],
+            venue_name=booking_data["venue_name"],
+            show_time_str=show_time_str,
+            seats_str=", ".join(seat_descs),
+            total_amount=round(booking_data["total_amount"], 2),
+            qr_code_data_uri=booking_data["qr_code_data"],
+            qr_png_bytes=qr_png_bytes,
+        )
+
+        return {
+            "message": f"Confirmation email successfully re-dispatched to {booking_data['customer_email']}",
+            "booking_reference": booking_reference,
+            "recipient": booking_data["customer_email"],
         }

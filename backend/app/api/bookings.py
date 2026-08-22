@@ -61,6 +61,21 @@ async def get_booking_details(
     return booking
 
 
+@router.post("/{booking_reference}/resend-email")
+async def resend_booking_email(
+    booking_reference: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Resend the official booking confirmation and admission QR passcard to registered email."""
+    result = await BookingService.resend_booking_confirmation(
+        db=db,
+        booking_reference=booking_reference,
+        user=current_user,
+    )
+    return result
+
+
 @router.post("/{booking_id}/cancel", response_model=BookingCancelResponse)
 async def cancel_booking(
     booking_id: int,

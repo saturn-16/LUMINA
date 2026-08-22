@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useLocation, Link } from 'react-router-dom';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
+import api from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import {
   CheckCircle2,
   ArrowRight,
@@ -15,15 +17,42 @@ import {
   QrCode,
   ShieldCheck,
   Film,
+  Send,
+  Loader2,
 } from 'lucide-react';
 
 export default function BookingConfirmation() {
   const location = useLocation();
+  const { user } = useAuth();
   const booking = location.state?.booking;
+
+  const [resending, setResending] = useState(false);
+  const [resendStatus, setResendStatus] = useState(null);
 
   const formatPrice = (val) => {
     if (typeof val !== 'number' || isNaN(val)) return '₹0';
     return `₹${Math.round(val).toLocaleString('en-IN')}`;
+  };
+
+  const handleResendEmail = async () => {
+    if (!booking?.booking_reference) return;
+    setResending(true);
+    setResendStatus(null);
+
+    try {
+      const res = await api.post(`/bookings/${booking.booking_reference}/resend-email`);
+      setResendStatus({
+        success: true,
+        message: res.data?.message || `Confirmation email dispatched to ${user?.email || 'your registered Gmail ID'}!`,
+      });
+    } catch (err) {
+      setResendStatus({
+        success: false,
+        message: err.response?.data?.detail || 'Failed to dispatch email. Please try again.',
+      });
+    } finally {
+      setResending(false);
+    }
   };
 
   if (!booking) {
@@ -80,6 +109,8 @@ export default function BookingConfirmation() {
       })
     : '';
 
+  const registeredEmail = user?.email || booking.customer_email || 'your registered Gmail ID';
+
   return (
     <div className="relative min-h-screen bg-[#050505] text-white font-sans selection:bg-white/20 selection:text-white pb-24 overflow-x-hidden">
       {/* Dark Ambient Radial Glow */}
@@ -121,11 +152,47 @@ export default function BookingConfirmation() {
             You're all set.
           </h1>
 
-          <p className="text-xs sm:text-sm text-white/60 max-w-md mx-auto flex items-center justify-center gap-2">
-            <Mail className="w-3.5 h-3.5 text-white/40" />
-            <span>Digital passcard dispatched & synced to your personal wallet.</span>
-          </p>
+          <div className="flex flex-col items-center gap-2">
+            <p className="text-xs sm:text-sm text-white/70 max-w-md mx-auto flex items-center justify-center gap-2">
+              <Mail className="w-4 h-4 text-emerald-400 shrink-0" />
+              <span>Confirmation ticket & entry QR dispatched to:</span>
+            </p>
+            <span className="px-3 py-1 rounded-full bg-white/10 border border-white/15 text-xs font-mono text-white font-medium">
+              {registeredEmail}
+            </span>
+          </div>
         </motion.div>
+
+        {/* Resend Email Status Alert */}
+        <AnimatePresence>
+          {resendStatus && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className={`mb-6 p-4 rounded-2xl border text-xs sm:text-sm flex items-center justify-between gap-3 shadow-2xl backdrop-blur-xl ${
+                resendStatus.success
+                  ? 'bg-emerald-950/80 border-emerald-700 text-emerald-200'
+                  : 'bg-red-950/80 border-red-700 text-red-200'
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                {resendStatus.success ? (
+                  <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+                ) : (
+                  <Mail className="w-5 h-5 text-red-400 shrink-0" />
+                )}
+                <span>{resendStatus.message}</span>
+              </div>
+              <button
+                onClick={() => setResendStatus(null)}
+                className="text-white/60 hover:text-white text-xs font-mono"
+              >
+                ✕
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Digital Boarding Passcard */}
         <motion.div
@@ -225,9 +292,28 @@ export default function BookingConfirmation() {
                 {booking.booking_reference}
               </div>
 
-              <p className="text-[11px] text-white/50 max-w-[180px] leading-tight">
+              <p className="text-[11px] text-white/50 max-w-[180px] leading-tight mb-4">
                 Scan this official entry pass at venue turnstiles.
               </p>
+
+              {/* Resend Email CTA */}
+              <button
+                onClick={handleResendEmail}
+                disabled={resending}
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white/10 hover:bg-white/20 border border-white/15 text-[10px] font-semibold text-white/90 uppercase tracking-wider transition-all cursor-pointer disabled:opacity-50"
+              >
+                {resending ? (
+                  <>
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                    <span>Dispatching...</span>
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-3 h-3 text-emerald-400" />
+                    <span>Resend to Mail</span>
+                  </>
+                )}
+              </button>
             </div>
           </div>
         </motion.div>
