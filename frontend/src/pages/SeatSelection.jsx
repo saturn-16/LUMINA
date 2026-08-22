@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import api from '../services/api';
 import { connectShowWebSocket } from '../services/websocket';
@@ -152,7 +153,12 @@ export default function SeatSelection() {
 
       <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+        <motion.div
+          initial={{ opacity: 0, y: 20, filter: 'blur(6px)' }}
+          animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+          transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+          className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8"
+        >
           <div>
             <Link
               to={`/events/${seatMap?.event_id}`}
@@ -177,28 +183,44 @@ export default function SeatSelection() {
               Join Waitlist
             </button>
           </div>
-        </div>
+        </motion.div>
 
         {error && (
-          <div className="mb-6 p-4 rounded-2xl bg-red-950/80 border border-red-800 text-red-300 text-sm flex items-center gap-3 shadow-lg backdrop-blur-md">
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-6 p-4 rounded-2xl bg-red-950/80 border border-red-800 text-red-300 text-sm flex items-center gap-3 shadow-lg backdrop-blur-md"
+          >
             <AlertCircle className="w-5 h-5 shrink-0 text-red-400" />
             <span>{error}</span>
-          </div>
+          </motion.div>
         )}
 
         {/* Visual Seat Map */}
-        <div className="liquid-glass rounded-3xl p-6 sm:p-10 border border-white/10 shadow-2xl backdrop-blur-xl">
+        <motion.div
+          initial={{ opacity: 0, y: 24, filter: 'blur(8px)' }}
+          animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+          transition={{ duration: 0.8, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
+          className="liquid-glass rounded-3xl p-6 sm:p-10 border border-white/10 shadow-2xl backdrop-blur-xl"
+        >
           <SeatMap
             seatMapData={seatMap}
             selectedSeats={selectedSeats}
             onToggleSeat={handleToggleSeat}
             isConcert={isConcert}
           />
-        </div>
+        </motion.div>
 
         {/* Fixed Bottom Action Bar */}
-        {selectedSeats.length > 0 && (
-          <div className="fixed bottom-0 left-0 right-0 z-40 liquid-glass-strong border-t border-white/10 shadow-2xl p-4 sm:p-6 transition-all duration-300 backdrop-blur-2xl">
+        <AnimatePresence>
+          {selectedSeats.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 40 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 40 }}
+              transition={{ duration: 0.4, ease: 'easeOut' }}
+              className="fixed bottom-0 left-0 right-0 z-40 liquid-glass-strong border-t border-white/10 shadow-2xl p-4 sm:p-6 backdrop-blur-2xl"
+            >
             <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
               <div className="flex items-center gap-4 w-full sm:w-auto">
                 <div>
@@ -241,8 +263,9 @@ export default function SeatSelection() {
                 )}
               </button>
             </div>
-          </div>
+          </motion.div>
         )}
+      </AnimatePresence>
 
         {/* Waitlist Modal */}
         {showWaitlistModal && (

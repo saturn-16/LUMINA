@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { motion } from 'motion/react';
 import api from '../services/api';
 import Navbar from '../components/Navbar';
 import GalaxyBackground from '../components/GalaxyBackground';
@@ -83,7 +84,12 @@ export default function AdminDashboard() {
       </div>
 
       <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+        <motion.div
+          initial={{ opacity: 0, y: 20, filter: 'blur(6px)' }}
+          animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+          transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+          className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8"
+        >
           <div>
             <span className="text-xs uppercase tracking-widest text-amber-400 font-bold">Admin Console</span>
             <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight mt-0.5">
@@ -98,20 +104,27 @@ export default function AdminDashboard() {
             <PlusCircle className="w-4 h-4" />
             Create Venue & Grid
           </button>
-        </div>
+        </motion.div>
 
         {success && (
-          <div className="mb-8 p-4 rounded-2xl bg-emerald-950/80 border border-emerald-800 text-emerald-300 text-sm flex items-center gap-3 shadow-xl backdrop-blur-xl">
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-8 p-4 rounded-2xl bg-emerald-950/80 border border-emerald-800 text-emerald-300 text-sm flex items-center gap-3 shadow-xl backdrop-blur-xl"
+          >
             <CheckCircle className="w-5 h-5 shrink-0 text-emerald-400" />
             <span>{success}</span>
-          </div>
+          </motion.div>
         )}
 
         {/* Venues Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {venues.map((v) => (
-            <div
+          {venues.map((v, idx) => (
+            <motion.div
               key={v.id}
+              initial={{ opacity: 0, y: 24, filter: 'blur(6px)' }}
+              animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+              transition={{ duration: 0.65, delay: 0.1 + idx * 0.08, ease: [0.16, 1, 0.3, 1] }}
               className="liquid-glass rounded-3xl p-6 sm:p-8 border border-white/10 shadow-2xl backdrop-blur-xl flex flex-col justify-between"
             >
               <div>
@@ -145,7 +158,7 @@ export default function AdminDashboard() {
                   </div>
                 </div>
               </div>
-            </div>
+            </motion.div>
           ))}
         </div>
 

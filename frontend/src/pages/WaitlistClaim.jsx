@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
+import { motion } from 'motion/react';
 import api from '../services/api';
 import Navbar from '../components/Navbar';
 import GalaxyBackground from '../components/GalaxyBackground';
@@ -39,10 +40,20 @@ export default function WaitlistClaim() {
       </div>
 
       <div className="relative z-10 max-w-md w-full mx-auto px-4 py-12 flex-1 flex flex-col justify-center">
-        <div className="liquid-glass border border-white/10 rounded-3xl p-8 text-center shadow-2xl backdrop-blur-xl">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30 mb-6 shadow-xl">
+        <motion.div
+          initial={{ opacity: 0, y: 24, filter: 'blur(8px)' }}
+          animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+          transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+          className="liquid-glass border border-white/10 rounded-3xl p-8 text-center shadow-2xl backdrop-blur-xl"
+        >
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ type: 'spring', damping: 15, stiffness: 200, delay: 0.1 }}
+            className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30 mb-6 shadow-xl"
+          >
             <Sparkles className="w-8 h-8" />
-          </div>
+          </motion.div>
 
           <h1 className="text-2xl font-black text-white tracking-tight mb-2">
             Claim Waitlist Seat
@@ -80,7 +91,7 @@ export default function WaitlistClaim() {
           <Link to="/events" className="inline-block text-xs font-semibold text-slate-400 hover:text-slate-200 mt-6">
             ← Browse other events
           </Link>
-        </div>
+        </motion.div>
       </div>
 
       <div className="relative z-10 py-6 text-center text-xs text-slate-600">

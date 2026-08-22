@@ -1,5 +1,6 @@
 import React from 'react';
 import { useLocation, Link } from 'react-router-dom';
+import { motion } from 'motion/react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import {
@@ -32,7 +33,12 @@ export default function BookingConfirmation() {
           <Navbar />
         </div>
 
-        <div className="relative z-10 max-w-lg mx-auto w-full text-center py-20">
+        <motion.div
+          initial={{ opacity: 0, y: 20, filter: 'blur(8px)' }}
+          animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+          transition={{ duration: 0.6 }}
+          className="relative z-10 max-w-lg mx-auto w-full text-center py-20"
+        >
           <span className="text-xs uppercase tracking-widest text-white/40 font-bold mb-3 block">
             Reservation Lookup
           </span>
@@ -49,7 +55,7 @@ export default function BookingConfirmation() {
             <span>Go to My Tickets</span>
             <ArrowUpRight className="w-4 h-4" />
           </Link>
-        </div>
+        </motion.div>
 
         <div className="max-w-7xl mx-auto w-full">
           <Footer />
@@ -92,10 +98,20 @@ export default function BookingConfirmation() {
 
       <div className="relative z-10 max-w-4xl mx-auto px-5 sm:px-8 pt-6">
         {/* Success Announcement */}
-        <div className="text-center mb-10">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 mb-4 shadow-2xl">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95, filter: 'blur(8px)' }}
+          animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
+          transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+          className="text-center mb-10"
+        >
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ type: 'spring', damping: 15, stiffness: 200, delay: 0.1 }}
+            className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 mb-4 shadow-2xl"
+          >
             <CheckCircle2 className="w-7 h-7" />
-          </div>
+          </motion.div>
 
           <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-400 block mb-2">
             Reservation Confirmed & Synced
@@ -109,10 +125,15 @@ export default function BookingConfirmation() {
             <Mail className="w-3.5 h-3.5 text-white/40" />
             <span>Digital passcard dispatched & synced to your personal wallet.</span>
           </p>
-        </div>
+        </motion.div>
 
         {/* Digital Boarding Passcard */}
-        <div className="rounded-3xl overflow-hidden liquid-glass border border-white/15 shadow-2xl mb-10">
+        <motion.div
+          initial={{ opacity: 0, y: 24, filter: 'blur(8px)' }}
+          animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+          transition={{ duration: 0.8, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
+          className="rounded-3xl overflow-hidden liquid-glass border border-white/15 shadow-2xl mb-10"
+        >
           <div className="grid grid-cols-1 md:grid-cols-12">
             {/* Left 8 Cols: Event info & Seat badges */}
             <div className="md:col-span-8 p-6 sm:p-8 flex flex-col justify-between bg-black/60">
@@ -155,13 +176,13 @@ export default function BookingConfirmation() {
               <div className="pt-4 border-t border-white/10 flex flex-wrap items-center justify-between gap-4">
                 <div>
                   <div className="text-[10px] uppercase tracking-widest text-white/40 mb-1.5 font-bold">
-                    Reserved Seats ({booking.seats?.length || 0})
+                    Reserved Seats
                   </div>
                   <div className="flex flex-wrap gap-1.5">
                     {booking.seats?.map((seat) => (
                       <span
                         key={seat.id || seat.show_seat_id}
-                        className="px-3 py-1 rounded-xl bg-white/15 border border-white/20 text-xs font-semibold text-white"
+                        className="px-2.5 py-1 rounded-lg bg-white/15 border border-white/20 text-xs font-semibold text-white"
                       >
                         {seat.row_label}
                         {seat.seat_number}{' '}
@@ -177,25 +198,25 @@ export default function BookingConfirmation() {
                   <div className="text-[10px] uppercase tracking-widest text-white/40 mb-0.5">
                     Total Paid
                   </div>
-                  <div className="text-lg font-bold font-mono text-white">
+                  <div className="text-xl font-normal text-white">
                     {formatPrice(booking.total_amount)}
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Right 4 Cols: Gate QR Scanner */}
-            <div className="md:col-span-4 p-6 sm:p-8 bg-black/90 flex flex-col items-center justify-center text-center border-t md:border-t-0 md:border-l border-white/10">
-              <div className="p-3 bg-white rounded-2xl shadow-2xl mb-3">
+            {/* Right 4 Cols: QR Entry Pass Gate */}
+            <div className="md:col-span-4 p-8 bg-black/90 flex flex-col items-center justify-center text-center border-t md:border-t-0 md:border-l border-white/10 relative">
+              <div className="p-3 bg-white rounded-2xl shadow-2xl mb-4">
                 {booking.qr_code_data ? (
                   <img
                     src={booking.qr_code_data}
-                    alt={`QR code for ${booking.booking_reference}`}
-                    className="w-36 h-36 object-contain"
+                    alt={`Admission QR for ${booking.booking_reference}`}
+                    className="w-36 h-36 sm:w-40 sm:h-40 object-contain"
                   />
                 ) : (
                   <div className="w-36 h-36 bg-slate-100 flex items-center justify-center text-slate-800">
-                    <QrCode className="w-14 h-14" />
+                    <QrCode className="w-16 h-16" />
                   </div>
                 )}
               </div>
@@ -204,32 +225,36 @@ export default function BookingConfirmation() {
                 {booking.booking_reference}
               </div>
 
-              <span className="text-[10px] text-white/40 uppercase tracking-wider">
-                Official Venue Admission Pass
-              </span>
+              <p className="text-[11px] text-white/50 max-w-[180px] leading-tight">
+                Scan this official entry pass at venue turnstiles.
+              </p>
             </div>
           </div>
-        </div>
+        </motion.div>
 
-        {/* Action Controls */}
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+        {/* Action Buttons */}
+        <motion.div
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.35 }}
+          className="flex flex-col sm:flex-row items-center justify-center gap-4"
+        >
           <Link
             to="/dashboard"
-            className="w-full sm:w-auto px-8 py-3.5 rounded-full bg-white text-black font-bold text-xs uppercase tracking-wider hover:bg-white/90 transition-all flex items-center justify-center gap-2 shadow-2xl hover:scale-[1.02] cursor-pointer"
+            className="w-full sm:w-auto px-8 py-3.5 rounded-full bg-white text-black font-semibold text-xs uppercase tracking-wider hover:bg-white/90 transition-all flex items-center justify-center gap-2 shadow-2xl shadow-white/10 hover:scale-[1.02] cursor-pointer"
           >
             <LayoutDashboard className="w-4 h-4" />
-            <span>View in My Tickets Wallet</span>
-            <ArrowUpRight className="w-4 h-4" />
+            <span>Go to My Tickets Wallet</span>
           </Link>
 
           <Link
             to="/events"
-            className="w-full sm:w-auto px-8 py-3.5 rounded-full liquid-glass border border-white/20 hover:bg-white/10 text-white font-semibold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer"
+            className="w-full sm:w-auto px-8 py-3.5 rounded-full liquid-glass border border-white/15 hover:bg-white/10 text-white font-semibold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer hover:scale-[1.02]"
           >
-            <span>Discover More Events</span>
+            <span>Explore More Events</span>
             <ArrowRight className="w-4 h-4" />
           </Link>
-        </div>
+        </motion.div>
       </div>
 
       {/* Editorial Liquid Glass Footer */}

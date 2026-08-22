@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { motion } from 'motion/react';
 import api from '../services/api';
 import { Calendar, Clock, MapPin, Ticket, Film, Music, ArrowLeft, AlertCircle } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import GalaxyBackground from '../components/GalaxyBackground';
+import Footer from '../components/Footer';
 
 export default function EventDetail() {
   const { eventId } = useParams();
@@ -30,7 +32,7 @@ export default function EventDetail() {
     return (
       <div className="relative min-h-screen text-slate-100 flex items-center justify-center">
         <GalaxyBackground />
-        <div className="relative z-10 animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+        <div className="relative z-10 animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-white/60"></div>
       </div>
     );
   }
@@ -39,13 +41,18 @@ export default function EventDetail() {
     return (
       <div className="relative min-h-screen text-slate-100 px-4 py-16">
         <GalaxyBackground />
-        <div className="relative z-10 max-w-3xl mx-auto liquid-glass rounded-3xl p-10 text-center border border-white/10">
+        <motion.div
+          initial={{ opacity: 0, y: 20, filter: 'blur(8px)' }}
+          animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+          transition={{ duration: 0.6 }}
+          className="relative z-10 max-w-3xl mx-auto liquid-glass rounded-3xl p-10 text-center border border-white/10"
+        >
           <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-3" />
           <h2 className="text-xl font-bold text-slate-200">{error || 'Event not found'}</h2>
           <Link to="/events" className="inline-block mt-4 text-sm font-semibold text-blue-400 hover:underline">
             ← Back to Events
           </Link>
-        </div>
+        </motion.div>
       </div>
     );
   }
@@ -61,16 +68,27 @@ export default function EventDetail() {
       </div>
 
       <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
-        <Link
-          to="/events"
-          className="inline-flex items-center gap-2 text-xs font-semibold text-slate-400 hover:text-white mb-6 transition-colors"
+        <motion.div
+          initial={{ opacity: 0, x: -10 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.5 }}
         >
-          <ArrowLeft className="w-4 h-4" />
-          Back to Events Discovery
-        </Link>
+          <Link
+            to="/events"
+            className="inline-flex items-center gap-2 text-xs font-semibold text-slate-400 hover:text-white mb-6 transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back to Events Discovery
+          </Link>
+        </motion.div>
 
         {/* Hero Header */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 liquid-glass rounded-3xl p-6 sm:p-8 border border-white/10 shadow-2xl mb-12 backdrop-blur-xl">
+        <motion.div
+          initial={{ opacity: 0, y: 24, filter: 'blur(8px)' }}
+          animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+          transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+          className="grid grid-cols-1 md:grid-cols-3 gap-8 liquid-glass rounded-3xl p-6 sm:p-8 border border-white/10 shadow-2xl mb-12 backdrop-blur-xl"
+        >
           <div className="md:col-span-1 overflow-hidden rounded-2xl bg-black/60 aspect-[3/4] max-h-96 border border-white/10">
             <img
               src={event.banner_url || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=800&auto=format&fit=crop&q=80'}
@@ -117,10 +135,14 @@ export default function EventDetail() {
               </div>
             </div>
           </div>
-        </div>
+        </motion.div>
 
         {/* Showtimes & Venue Selection */}
-        <div>
+        <motion.div
+          initial={{ opacity: 0, y: 24, filter: 'blur(8px)' }}
+          animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+          transition={{ duration: 0.8, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
+        >
           <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
             <Calendar className="w-5 h-5 text-blue-400" />
             Select Showtime & Venue
@@ -132,7 +154,7 @@ export default function EventDetail() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {event.shows.map((show) => {
+              {event.shows.map((show, idx) => {
                 const startDate = new Date(show.start_time).toLocaleDateString('en-US', {
                   weekday: 'short',
                   month: 'short',
@@ -144,8 +166,11 @@ export default function EventDetail() {
                 });
 
                 return (
-                  <div
+                  <motion.div
                     key={show.id}
+                    initial={{ opacity: 0, y: 20, filter: 'blur(6px)' }}
+                    animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                    transition={{ duration: 0.6, delay: 0.2 + idx * 0.08, ease: [0.16, 1, 0.3, 1] }}
                     className="liquid-glass rounded-3xl p-6 border border-white/10 hover:border-white/20 transition-all flex flex-col justify-between shadow-xl backdrop-blur-xl"
                   >
                     <div>
@@ -178,7 +203,7 @@ export default function EventDetail() {
                             key={pr.id}
                             className="px-2.5 py-1 rounded-lg bg-black/50 border border-white/10 text-xs font-medium text-slate-300"
                           >
-                            {pr.category?.name}: <strong className="text-slate-100">${pr.price.toFixed(2)}</strong>
+                            {pr.category?.name}: <strong className="text-slate-100">₹{Math.round(pr.price).toLocaleString('en-IN')}</strong>
                           </span>
                         ))}
                       </div>
@@ -189,17 +214,22 @@ export default function EventDetail() {
                       className={`w-full py-3 rounded-xl font-bold text-sm text-center transition-all ${
                         show.is_sold_out
                           ? 'bg-purple-600 hover:bg-purple-500 text-white shadow-lg shadow-purple-600/30'
-                          : 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/30'
+                          : 'bg-white text-black hover:bg-white/90 shadow-lg shadow-white/10'
                       }`}
                     >
                       {show.is_sold_out ? 'Join Sold-Out Waitlist →' : 'Select Seats →'}
                     </Link>
-                  </div>
+                  </motion.div>
                 );
               })}
             </div>
           )}
-        </div>
+        </motion.div>
+      </div>
+
+      {/* Footer */}
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-20">
+        <Footer />
       </div>
     </div>
   );

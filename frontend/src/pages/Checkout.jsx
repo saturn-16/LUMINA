@@ -210,7 +210,12 @@ export default function Checkout() {
         </div>
 
         {/* Editorial Page Header */}
-        <section className="mb-10">
+        <motion.section
+          initial={{ opacity: 0, y: 24, filter: 'blur(8px)' }}
+          animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+          transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+          className="mb-10"
+        >
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
             <div>
               <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest bg-white/10 text-white/80 border border-white/10 mb-4">
@@ -234,7 +239,7 @@ export default function Checkout() {
               </div>
             </div>
           </div>
-        </section>
+        </motion.section>
 
         {/* Inline Error Display */}
         {error && (
@@ -251,7 +256,12 @@ export default function Checkout() {
         {/* 2-Column Asymmetric Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           {/* Left 7 Cols: Event Showcase, Seat Breakdown, and Customer Details */}
-          <div className="lg:col-span-7 space-y-8">
+          <motion.div
+            initial={{ opacity: 0, y: 24, filter: 'blur(8px)' }}
+            animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+            transition={{ duration: 0.8, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
+            className="lg:col-span-7 space-y-8"
+          >
             {/* 1. Event Showcase Card */}
             <div className="group rounded-3xl overflow-hidden liquid-glass border border-white/10 hover:border-white/20 shadow-2xl transition-all duration-500">
               <div className="relative h-60 sm:h-72 w-full overflow-hidden bg-black">
@@ -386,10 +396,15 @@ export default function Checkout() {
                 Your high-contrast QR entry passcards and booking confirmation will be stored in your Lumina Wallet and dispatched to your email address.
               </p>
             </div>
-          </div>
+          </motion.div>
 
           {/* Right 5 Cols: Editorial Sticky Receipt / Order Summary */}
-          <div className="lg:col-span-5">
+          <motion.div
+            initial={{ opacity: 0, y: 24, filter: 'blur(8px)' }}
+            animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+            transition={{ duration: 0.8, delay: 0.25, ease: [0.16, 1, 0.3, 1] }}
+            className="lg:col-span-5"
+          >
             <div className="rounded-3xl p-6 sm:p-8 liquid-glass border border-white/15 shadow-2xl sticky top-6 space-y-6">
               <div className="flex items-center justify-between pb-4 border-b border-white/10">
                 <h3 className="text-xs uppercase tracking-widest font-bold text-white/70">
@@ -464,7 +479,7 @@ export default function Checkout() {
                 <span>Instant Ticket Issuance & QR Admission Guaranteed</span>
               </div>
             </div>
-          </div>
+          </motion.div>
         </div>
       </div>
 

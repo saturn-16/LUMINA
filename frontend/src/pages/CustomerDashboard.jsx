@@ -141,7 +141,12 @@ export default function CustomerDashboard() {
         </div>
 
         {/* Editorial Page Header */}
-        <section className="mb-12">
+        <motion.section
+          initial={{ opacity: 0, y: 24, filter: 'blur(8px)' }}
+          animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+          transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+          className="mb-12"
+        >
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
             <div>
               <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest bg-white/10 text-white/80 border border-white/10 mb-4">
@@ -186,7 +191,7 @@ export default function CustomerDashboard() {
               </button>
             </div>
           </div>
-        </section>
+        </motion.section>
 
         {/* Notifications & Feedback Alerts */}
         {message && (
@@ -313,7 +318,11 @@ export default function CustomerDashboard() {
                 1. PRIMARY UPCOMING EXPERIENCE (Widescreen Cinematic Digital Ticket)
                ========================================================================= */}
             {primaryUpcoming && (
-              <section>
+              <motion.section
+                initial={{ opacity: 0, y: 24, filter: 'blur(8px)' }}
+                animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                transition={{ duration: 0.8, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
+              >
                 <div className="flex items-center justify-between mb-4">
                   <span className="text-xs uppercase tracking-widest font-bold text-white/50 flex items-center gap-2">
                     <Flame className="w-4 h-4 text-amber-400" />
@@ -460,7 +469,7 @@ export default function CustomerDashboard() {
                     </div>
                   </div>
                 </div>
-              </section>
+              </motion.section>
             )}
 
             {/* =========================================================================
@@ -468,19 +477,27 @@ export default function CustomerDashboard() {
                ========================================================================= */}
             {secondaryUpcoming.length > 0 && (
               <section>
-                <div className="flex items-center justify-between mb-6">
+                <motion.div
+                  initial={{ opacity: 0, y: 20, filter: 'blur(6px)' }}
+                  animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                  transition={{ duration: 0.7, delay: 0.25, ease: [0.16, 1, 0.3, 1] }}
+                  className="flex items-center justify-between mb-6"
+                >
                   <h2 className="text-2xl sm:text-3xl font-normal tracking-tight text-white">
                     Coming <span className="italic text-white/70">next</span>
                   </h2>
                   <span className="text-xs uppercase tracking-widest text-white/40 font-mono">
                     {secondaryUpcoming.length} Upcoming Passes
                   </span>
-                </div>
+                </motion.div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {secondaryUpcoming.map((b) => (
-                    <div
+                  {secondaryUpcoming.map((b, idx) => (
+                    <motion.div
                       key={b.id}
+                      initial={{ opacity: 0, y: 24, filter: 'blur(6px)' }}
+                      animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                      transition={{ duration: 0.65, delay: 0.15 + idx * 0.08, ease: [0.16, 1, 0.3, 1] }}
                       className="group relative rounded-3xl overflow-hidden liquid-glass border border-white/10 hover:border-white/25 shadow-xl transition-all duration-500 flex flex-col justify-between"
                     >
                       {/* Top Poster Aspect */}
@@ -577,7 +594,7 @@ export default function CustomerDashboard() {
                           </div>
                         </div>
                       </div>
-                    </div>
+                    </motion.div>
                   ))}
                 </div>
               </section>
@@ -588,7 +605,12 @@ export default function CustomerDashboard() {
                ========================================================================= */}
             {pastOrCancelledBookings.length > 0 && (
               <section className="pt-4">
-                <div className="flex items-center justify-between mb-6">
+                <motion.div
+                  initial={{ opacity: 0, y: 20, filter: 'blur(6px)' }}
+                  animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                  transition={{ duration: 0.7, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
+                  className="flex items-center justify-between mb-6"
+                >
                   <div>
                     <h2 className="text-2xl sm:text-3xl font-normal tracking-tight text-white">
                       Experience <span className="italic text-white/70">archive</span>
@@ -597,14 +619,17 @@ export default function CustomerDashboard() {
                   <span className="text-xs uppercase tracking-widest text-white/40 font-mono">
                     {pastOrCancelledBookings.length} Recorded Nights
                   </span>
-                </div>
+                </motion.div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {pastOrCancelledBookings.map((pb) => {
+                  {pastOrCancelledBookings.map((pb, idx) => {
                     const isCancelled = pb.status === 'CANCELLED';
                     return (
-                      <div
+                      <motion.div
                         key={pb.id}
+                        initial={{ opacity: 0, y: 20, filter: 'blur(6px)' }}
+                        animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                        transition={{ duration: 0.6, delay: 0.1 + idx * 0.05, ease: [0.16, 1, 0.3, 1] }}
                         className={`rounded-3xl overflow-hidden liquid-glass border transition-all duration-300 ${
                           isCancelled
                             ? 'border-red-900/30 opacity-70 bg-red-950/10'
@@ -657,7 +682,7 @@ export default function CustomerDashboard() {
                             <span>{formatPrice(pb.total_amount)}</span>
                           </div>
                         </div>
-                      </div>
+                      </motion.div>
                     );
                   })}
                 </div>

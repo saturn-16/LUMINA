@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { motion } from 'motion/react';
 import { useAuth } from '../context/AuthContext';
 import Navbar from '../components/Navbar';
 import GalaxyBackground from '../components/GalaxyBackground';
@@ -44,7 +45,12 @@ export default function Register() {
       </div>
 
       <div className="relative z-10 max-w-md w-full mx-auto px-4 py-8 flex-1 flex flex-col justify-center">
-        <div className="liquid-glass rounded-3xl p-8 border border-white/10 shadow-2xl backdrop-blur-2xl">
+        <motion.div
+          initial={{ opacity: 0, y: 24, filter: 'blur(8px)' }}
+          animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+          transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+          className="liquid-glass rounded-3xl p-8 border border-white/10 shadow-2xl backdrop-blur-2xl"
+        >
           <div className="text-center mb-8">
             <h1 className="text-2xl font-black text-white tracking-tight">Create Account</h1>
             <p className="text-xs text-slate-400 mt-1">Join Lumina for premium movie and concert bookings</p>
@@ -144,11 +150,11 @@ export default function Register() {
               Sign in
             </Link>
           </div>
-        </div>
+        </motion.div>
       </div>
 
       <div className="relative z-10 py-6 text-center text-xs text-slate-600">
-        Lumina Ticketing Engine • Secure JWT Authentication
+        Lumina Ticketing Engine • Fast & Reliable High-Concurrency Booking
       </div>
     </div>
   );

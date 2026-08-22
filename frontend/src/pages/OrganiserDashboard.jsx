@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { motion } from 'motion/react';
 import api from '../services/api';
 import Navbar from '../components/Navbar';
 import GalaxyBackground from '../components/GalaxyBackground';
@@ -120,7 +121,12 @@ export default function OrganiserDashboard() {
       </div>
 
       <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+        <motion.div
+          initial={{ opacity: 0, y: 20, filter: 'blur(6px)' }}
+          animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+          transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+          className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8"
+        >
           <div>
             <span className="text-xs uppercase tracking-widest text-purple-400 font-bold">Studio Hub</span>
             <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight mt-0.5">
@@ -135,17 +141,25 @@ export default function OrganiserDashboard() {
             <PlusCircle className="w-4 h-4" />
             Create New Event
           </button>
-        </div>
+        </motion.div>
 
         {actionSuccess && (
-          <div className="mb-8 p-4 rounded-2xl bg-emerald-950/80 border border-emerald-800 text-emerald-300 text-sm flex items-center gap-3 shadow-xl backdrop-blur-xl">
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-8 p-4 rounded-2xl bg-emerald-950/80 border border-emerald-800 text-emerald-300 text-sm flex items-center gap-3 shadow-xl backdrop-blur-xl"
+          >
             <CheckCircle className="w-5 h-5 shrink-0 text-emerald-400" />
             <span>{actionSuccess}</span>
-          </div>
+          </motion.div>
         )}
 
         {/* Events & Shows Management List */}
-        <div>
+        <motion.div
+          initial={{ opacity: 0, y: 24, filter: 'blur(8px)' }}
+          animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+          transition={{ duration: 0.8, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
+        >
           <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
             <Film className="w-5 h-5 text-purple-400" />
             Managed Events & Scheduled Showtimes
@@ -231,7 +245,7 @@ export default function OrganiserDashboard() {
               ))}
             </div>
           )}
-        </div>
+        </motion.div>
 
         {/* Modal: Create Event */}
         {showEventModal && (

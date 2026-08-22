@@ -146,7 +146,12 @@ export default function Home() {
         </div>
 
         {/* Editorial Page Header & Floating Search Row */}
-        <section className="mb-14">
+        <motion.section
+          initial={{ opacity: 0, y: 24, filter: 'blur(8px)' }}
+          animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+          transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+          className="mb-14"
+        >
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-end">
             {/* Left Column: Editorial Typography */}
             <div className="lg:col-span-7">
@@ -231,7 +236,7 @@ export default function Home() {
               );
             })}
           </div>
-        </section>
+        </motion.section>
 
         {/* Loading State */}
         {loading ? (
@@ -270,7 +275,11 @@ export default function Home() {
                 1. FEATURED CINEMATIC SPOTLIGHT EVENT CARD (Dynamic First Event)
                ========================================================================= */}
             {featuredEvent && (
-              <section>
+              <motion.section
+                initial={{ opacity: 0, y: 24, filter: 'blur(8px)' }}
+                animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                transition={{ duration: 0.8, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
+              >
                 <Link
                   to={`/events/${featuredEvent.id}`}
                   className="group relative block w-full rounded-3xl overflow-hidden liquid-glass border border-white/10 hover:border-white/25 shadow-2xl transition-all duration-500 hover:shadow-white/5"
@@ -357,7 +366,7 @@ export default function Home() {
                     </div>
                   </div>
                 </Link>
-              </section>
+              </motion.section>
             )}
 
             {/* =========================================================================
@@ -365,7 +374,12 @@ export default function Home() {
                ========================================================================= */}
             {displayedEvents.length > 0 && (
               <section className="pt-2">
-                <div className="flex items-center justify-between mb-8">
+                <motion.div
+                  initial={{ opacity: 0, y: 20, filter: 'blur(6px)' }}
+                  animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                  transition={{ duration: 0.7, delay: 0.25, ease: [0.16, 1, 0.3, 1] }}
+                  className="flex items-center justify-between mb-8"
+                >
                   <div>
                     <h2 className="text-2xl sm:text-3xl font-normal tracking-tight text-white flex items-center gap-2.5">
                       <Flame className="w-6 h-6 text-amber-400" />
@@ -375,7 +389,7 @@ export default function Home() {
                   <span className="text-xs uppercase tracking-widest text-white/40 font-mono">
                     Showing {displayedEvents.length + 1} of {events.length}
                   </span>
-                </div>
+                </motion.div>
 
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-8">
                   {displayedEvents.map((evt, idx) => {
@@ -402,90 +416,102 @@ export default function Home() {
                     }
 
                     return (
-                      <Link
+                      <motion.div
                         key={evt.id}
-                        to={`/events/${evt.id}`}
-                        className={`group relative rounded-3xl overflow-hidden liquid-glass border border-white/10 hover:border-white/25 shadow-xl transition-all duration-500 hover:shadow-white/5 ${colSpanClass}`}
+                        initial={{ opacity: 0, y: 24, filter: 'blur(6px)' }}
+                        animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                        transition={{ duration: 0.65, delay: 0.1 + idx * 0.05, ease: [0.16, 1, 0.3, 1] }}
+                        className={colSpanClass}
                       >
-                        {/* Background Poster Image */}
-                        <div className={`relative w-full ${heightClass} overflow-hidden bg-black`}>
-                          <img
-                            src={
-                              evt.banner_url ||
-                              'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=1000&auto=format&fit=crop&q=80'
-                            }
-                            alt={evt.title}
-                            onError={(e) => {
-                              e.currentTarget.onerror = null;
-                              e.currentTarget.src =
-                                'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=1000&auto=format&fit=crop&q=80';
-                            }}
-                            className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700 ease-out"
-                          />
+                        <Link
+                          to={`/events/${evt.id}`}
+                          className="group relative block rounded-3xl overflow-hidden liquid-glass border border-white/10 hover:border-white/25 shadow-xl transition-all duration-500 hover:shadow-white/5 h-full"
+                        >
+                          {/* Background Poster Image */}
+                          <div className={`relative w-full ${heightClass} overflow-hidden bg-black`}>
+                            <img
+                              src={
+                                evt.banner_url ||
+                                'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=1000&auto=format&fit=crop&q=80'
+                              }
+                              alt={evt.title}
+                              onError={(e) => {
+                                e.currentTarget.onerror = null;
+                                e.currentTarget.src =
+                                  'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=1000&auto=format&fit=crop&q=80';
+                              }}
+                              className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700 ease-out"
+                            />
 
-                          {/* Dark Vignette Overlay */}
-                          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-black/10" />
+                            {/* Dark Vignette Overlay */}
+                            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-black/10" />
 
-                          {/* Top Badges */}
-                          <div className="absolute top-5 left-5 flex items-center gap-1.5">
-                            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest bg-white/20 text-white backdrop-blur-md border border-white/20">
-                              {evt.event_type}
-                            </span>
-                            {evt.city && (
-                              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-medium text-white/80 bg-black/60 backdrop-blur-md border border-white/10 flex items-center gap-1">
-                                <MapPin className="w-2.5 h-2.5 text-white/50" />
-                                {evt.city}
+                            {/* Top Badges */}
+                            <div className="absolute top-5 left-5 flex items-center gap-1.5">
+                              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest bg-white/20 text-white backdrop-blur-md border border-white/20">
+                                {evt.event_type}
                               </span>
-                            )}
-                          </div>
+                              {evt.city && (
+                                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-medium text-white/80 bg-black/60 backdrop-blur-md border border-white/10 flex items-center gap-1">
+                                  <MapPin className="w-2.5 h-2.5 text-white/50" />
+                                  {evt.city}
+                                </span>
+                              )}
+                            </div>
 
-                          {/* Duration Tag */}
-                          <div className="absolute top-5 right-5">
-                            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-medium text-white/75 bg-black/60 backdrop-blur-md border border-white/10">
-                              {evt.duration_minutes}m
-                            </span>
-                          </div>
-
-                          {/* Bottom Card Content */}
-                          <div className="absolute inset-x-0 bottom-0 p-6 sm:p-8 flex flex-col justify-end">
-                            <h3 className="text-xl sm:text-2xl md:text-3xl font-normal tracking-tight text-white leading-tight mb-2 group-hover:text-white/90 transition-colors line-clamp-1">
-                              {evt.title}
-                            </h3>
-
-                            <p className="text-xs text-white/60 line-clamp-2 mb-4 leading-relaxed font-normal">
-                              {evt.description}
-                            </p>
-
-                            <div className="pt-4 border-t border-white/10 flex items-center justify-between">
-                              <div>
-                                <div className="text-[10px] uppercase tracking-widest text-white/40">Tickets from</div>
-                                <div className="text-base font-bold text-white">
-                                  {formatPrice(evt.min_price)}
-                                </div>
-                              </div>
-
-                              <span className="px-4 py-1.5 rounded-full bg-white text-black text-xs font-semibold tracking-wide flex items-center gap-1.5 group-hover:bg-white/90 transition-all group-hover:translate-x-0.5">
-                                <span>Select Seats</span>
-                                <ArrowUpRight className="w-3.5 h-3.5" />
+                            {/* Duration Tag */}
+                            <div className="absolute top-5 right-5">
+                              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-medium text-white/75 bg-black/60 backdrop-blur-md border border-white/10">
+                                {evt.duration_minutes}m
                               </span>
                             </div>
+
+                            {/* Bottom Card Content */}
+                            <div className="absolute inset-x-0 bottom-0 p-6 sm:p-8 flex flex-col justify-end">
+                              <h3 className="text-xl sm:text-2xl md:text-3xl font-normal tracking-tight text-white leading-tight mb-2 group-hover:text-white/90 transition-colors line-clamp-1">
+                                {evt.title}
+                              </h3>
+
+                              <p className="text-xs text-white/60 line-clamp-2 mb-4 leading-relaxed font-normal">
+                                {evt.description}
+                              </p>
+
+                              <div className="pt-4 border-t border-white/10 flex items-center justify-between">
+                                <div>
+                                  <div className="text-[10px] uppercase tracking-widest text-white/40">Tickets from</div>
+                                  <div className="text-base font-bold text-white">
+                                    {formatPrice(evt.min_price)}
+                                  </div>
+                                </div>
+
+                                <span className="px-4 py-1.5 rounded-full bg-white text-black text-xs font-semibold tracking-wide flex items-center gap-1.5 group-hover:bg-white/90 transition-all group-hover:translate-x-0.5">
+                                  <span>Select Seats</span>
+                                  <ArrowUpRight className="w-3.5 h-3.5" />
+                                </span>
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                      </Link>
+                        </Link>
+                      </motion.div>
                     );
                   })}
                 </div>
 
                 {/* Load More Button */}
                 {hasMore && (
-                  <div className="mt-12 text-center">
+                  <motion.div
+                    initial={{ opacity: 0, y: 15 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.6 }}
+                    className="mt-12 text-center"
+                  >
                     <button
                       onClick={handleLoadMore}
                       className="px-8 py-3 rounded-full liquid-glass border border-white/20 hover:bg-white/10 text-white font-semibold text-xs uppercase tracking-widest transition-all cursor-pointer shadow-lg hover:scale-[1.02]"
                     >
                       Load More Experiences ({remainingEvents.length - visibleCount} remaining) ↓
                     </button>
-                  </div>
+                  </motion.div>
                 )}
               </section>
             )}
