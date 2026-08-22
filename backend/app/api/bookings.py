@@ -17,6 +17,7 @@ router = APIRouter(prefix="/bookings", tags=["Bookings"])
 
 
 @router.post("", response_model=BookingResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/confirm", response_model=BookingResponse, status_code=status.HTTP_201_CREATED)
 async def complete_booking(
     payload: BookingCreate,
     current_user: User = Depends(get_current_user),
