@@ -25,13 +25,15 @@ export default function Login() {
     setLoading(true);
 
     try {
-      await login(email, password, rememberMe);
+      const u = await login(email, password, rememberMe);
       if (!rememberMe) {
         localStorage.removeItem('lumina_saved_email');
         localStorage.removeItem('lumina_saved_password');
         localStorage.setItem('lumina_remember_me', 'false');
       }
-      navigate(from, { replace: true });
+      if (u.role === 'ADMIN' && from === '/dashboard') navigate('/admin', { replace: true });
+      else if (u.role === 'ORGANISER' && from === '/dashboard') navigate('/organiser', { replace: true });
+      else navigate(from, { replace: true });
     } catch (err) {
       setError(err.response?.data?.detail || 'Invalid email or password.');
     } finally {
@@ -39,9 +41,21 @@ export default function Login() {
     }
   };
 
-  const handleQuickLogin = (demoEmail, demoPass) => {
+  const handleQuickLogin = async (demoEmail, demoPass) => {
     setEmail(demoEmail);
     setPassword(demoPass);
+    setError(null);
+    setLoading(true);
+    try {
+      const u = await login(demoEmail, demoPass, true);
+      if (u.role === 'ADMIN') navigate('/admin', { replace: true });
+      else if (u.role === 'ORGANISER') navigate('/organiser', { replace: true });
+      else navigate(from || '/dashboard', { replace: true });
+    } catch (err) {
+      setError(err.response?.data?.detail || 'Quick login failed.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

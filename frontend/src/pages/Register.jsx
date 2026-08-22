@@ -26,8 +26,10 @@ export default function Register() {
     setLoading(true);
 
     try {
-      await register(formData, rememberMe);
-      navigate('/dashboard');
+      const u = await register(formData, rememberMe);
+      if (u.role === 'ADMIN') navigate('/admin', { replace: true });
+      else if (u.role === 'ORGANISER') navigate('/organiser', { replace: true });
+      else navigate('/dashboard', { replace: true });
     } catch (err) {
       setError(err.response?.data?.detail || 'Registration failed. Please try again.');
     } finally {
