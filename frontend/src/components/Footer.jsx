@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { LuminaLogo } from './Navbar';
 import { Music2 } from 'lucide-react';
@@ -8,27 +9,26 @@ export default function Footer() {
   const cities = ['Mumbai', 'Delhi', 'Bengaluru', 'Hyderabad', 'Pune'];
 
   const discoverLinks = [
-    'Movies & Concerts',
-    'Live Experiences',
-    'Cities',
-    'Popular Events',
-    'Coming Soon',
+    { label: 'Movies & Concerts', to: '/events' },
+    { label: 'Live Experiences', to: '/events' },
+    { label: 'Cities', to: '/events' },
+    { label: 'Popular Events', to: '/events' },
+    { label: 'Coming Soon', to: '/events' },
   ];
 
   const platformLinks = [
-    'How It Works',
-    'Seat Selection',
-    'My Tickets',
-    'Waitlist',
-    'For Organisers',
+    { label: 'How It Works', to: '/' },
+    { label: 'Seat Selection', to: '/events' },
+    { label: 'My Tickets', to: '/dashboard' },
+    { label: 'Waitlist System', to: '/dashboard' },
+    { label: 'For Organisers', to: '/organiser' },
   ];
 
   const conciergeLinks = [
-    'Get in Touch',
-    'Legal Privacy',
-    'User Agreement',
-    'Help Center',
-    'Report Concern',
+    { label: 'Get in Touch', to: '/dashboard' },
+    { label: 'User Agreement', to: '/dashboard' },
+    { label: 'Help Center', to: '/dashboard' },
+    { label: 'Admin Portal', to: '/admin' },
   ];
 
   return (
@@ -40,31 +40,32 @@ export default function Footer() {
         delay: 0.4,
         ease: 'easeOut',
       }}
-      className="liquid-glass w-full rounded-3xl p-6 md:p-10 text-white/70 mt-32 md:mt-64 shadow-2xl"
+      className="liquid-glass w-full rounded-3xl p-6 md:p-10 text-white/70 mt-32 md:mt-64 shadow-2xl relative z-10"
     >
       {/* Top Grid */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-10 md:gap-12 mb-10">
         {/* First Column: Brand Info */}
         <div className="md:col-span-5 flex flex-col justify-between">
           <div>
-            <div className="flex items-center gap-2.5 text-white mb-4">
+            <Link to="/" className="flex items-center gap-2.5 text-white mb-4 hover:opacity-90 transition-opacity">
               <LuminaLogo className="w-6 h-6 text-white" />
               <span className="text-xl font-medium tracking-tight">LUMINA</span>
-            </div>
+            </Link>
 
-            <p className="text-sm leading-relaxed max-w-sm text-white/70 mb-6">
+            <p className="text-sm leading-relaxed max-w-sm text-white/70 mb-6 font-normal">
               Lumina brings premium clarity to movies, concerts and live experiences across India — helping you find the moments worth showing up for.
             </p>
 
             {/* City Pills */}
             <div className="flex items-center gap-2 flex-wrap">
               {cities.map((city) => (
-                <span
+                <Link
                   key={city}
-                  className="liquid-glass rounded-full px-3 py-1 text-[11px] font-medium text-white/60"
+                  to={`/events?city=${city}`}
+                  className="liquid-glass rounded-full px-3 py-1 text-[11px] font-medium text-white/60 hover:text-white hover:bg-white/10 transition-colors"
                 >
                   {city}
-                </span>
+                </Link>
               ))}
             </div>
           </div>
@@ -77,12 +78,12 @@ export default function Footer() {
             <h4 className="text-sm uppercase tracking-wider text-white font-medium mb-4">
               Discover
             </h4>
-            <ul className="space-y-2.5 text-xs text-white/70">
+            <ul className="space-y-2.5 text-xs text-white/70 font-normal">
               {discoverLinks.map((link) => (
-                <li key={link}>
-                  <a href="#" className="hover:text-white transition-colors">
-                    {link}
-                  </a>
+                <li key={link.label}>
+                  <Link to={link.to} className="hover:text-white transition-colors">
+                    {link.label}
+                  </Link>
                 </li>
               ))}
             </ul>
@@ -93,12 +94,12 @@ export default function Footer() {
             <h4 className="text-sm uppercase tracking-wider text-white font-medium mb-4">
               The Platform
             </h4>
-            <ul className="space-y-2.5 text-xs text-white/70">
+            <ul className="space-y-2.5 text-xs text-white/70 font-normal">
               {platformLinks.map((link) => (
-                <li key={link}>
-                  <a href="#" className="hover:text-white transition-colors">
-                    {link}
-                  </a>
+                <li key={link.label}>
+                  <Link to={link.to} className="hover:text-white transition-colors">
+                    {link.label}
+                  </Link>
                 </li>
               ))}
             </ul>
@@ -109,12 +110,12 @@ export default function Footer() {
             <h4 className="text-sm uppercase tracking-wider text-white font-medium mb-4">
               Concierge
             </h4>
-            <ul className="space-y-2.5 text-xs text-white/70">
+            <ul className="space-y-2.5 text-xs text-white/70 font-normal">
               {conciergeLinks.map((link) => (
-                <li key={link}>
-                  <a href="#" className="hover:text-white transition-colors">
-                    {link}
-                  </a>
+                <li key={link.label}>
+                  <Link to={link.to} className="hover:text-white transition-colors">
+                    {link.label}
+                  </Link>
                 </li>
               ))}
             </ul>
