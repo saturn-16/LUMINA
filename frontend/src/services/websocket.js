@@ -2,9 +2,10 @@
  * WebSocket client helper for real-time seat status updates per show.
  */
 export function connectShowWebSocket(showId, onMessage, onError) {
-  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  const host = window.location.host;
-  const wsUrl = `${protocol}//${host}/ws/shows/${showId}`;
+  const isVercel = typeof window !== 'undefined' && window.location.hostname.includes('vercel.app');
+  const wsHost = isVercel ? 'lumina-16hr.onrender.com' : window.location.host;
+  const protocol = isVercel || window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const wsUrl = `${protocol}//${wsHost}/ws/shows/${showId}`;
 
   let ws;
   let isClosedManually = false;

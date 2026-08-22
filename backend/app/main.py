@@ -92,6 +92,13 @@ async def health_check():
     return {"status": "healthy", "project": settings.PROJECT_NAME}
 
 
+@app.post("/api/firebase-login", tags=["Auth"])
+@app.post("/firebase-login", tags=["Auth"])
+async def root_firebase_login(payload: FirebaseSocialLogin, db: AsyncSession = Depends(get_db)):
+    from backend.app.api.auth import firebase_login_user
+    return await firebase_login_user(payload, db)
+
+
 @app.get("/api/venues", tags=["Venues"])
 @app.get("/venues", tags=["Venues"])
 async def list_venues_all(db: AsyncSession = Depends(get_db)):
