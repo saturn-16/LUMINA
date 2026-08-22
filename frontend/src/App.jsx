@@ -7,9 +7,6 @@ import CategoryPills from './components/CategoryPills';
 import Stats from './components/Stats';
 import Footer from './components/Footer';
 
-const CONCERT_VIDEO_URL =
-  'https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260429_114316_1c7889ad-2885-410e-b493-98119fee0ddb.mp4';
-
 export default function App() {
   const handleBookClick = () => {
     window.scrollTo({
@@ -28,18 +25,12 @@ export default function App() {
 
   return (
     <main className="relative w-full min-h-[115vh] overflow-x-hidden flex flex-col items-center font-sans selection:bg-white/20 selection:text-white bg-black text-white">
-      {/* Fixed Main Background Video */}
-      <video
-        className="fixed inset-0 w-full h-full object-cover z-[0]"
-        autoPlay
-        loop
-        muted
-        playsInline
-        preload="auto"
-        src={CONCERT_VIDEO_URL}
-      />
-
-      {/* Concert Atmosphere Layer (Moving lasers, spotlight, vignette, film grain) */}
+      {/* 
+        ========================================================================
+        GENUINE LIVE CONCERT FESTIVAL BACKGROUND LAYER (NO PLANET/SPACE VIDEO)
+        Photorealistic concert stage, dense crowd, moving lights, floating embers
+        ========================================================================
+      */}
       <ConcertAtmosphere />
 
       {/* Content Wrapper */}
