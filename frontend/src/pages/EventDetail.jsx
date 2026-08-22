@@ -75,6 +75,11 @@ export default function EventDetail() {
             <img
               src={event.banner_url || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=800&auto=format&fit=crop&q=80'}
               alt={event.title}
+              onError={(e) => {
+                e.currentTarget.onerror = null;
+                e.currentTarget.src =
+                  'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=800&auto=format&fit=crop&q=80';
+              }}
               className="w-full h-full object-cover"
             />
           </div>
