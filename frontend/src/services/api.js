@@ -1,7 +1,11 @@
 import axios from 'axios';
 
+const defaultBaseUrl = typeof window !== 'undefined' && window.location.hostname.includes('vercel.app')
+  ? 'https://lumina-16hr.onrender.com/api'
+  : '/api';
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || '/api',
+  baseURL: import.meta.env.VITE_API_URL || defaultBaseUrl,
   headers: {
     'Content-Type': 'application/json',
   },

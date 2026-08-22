@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { useAuth } from '../context/AuthContext';
 import Navbar from '../components/Navbar';
 import GalaxyBackground from '../components/GalaxyBackground';
-import { Lock, Mail, AlertCircle, ArrowRight, UserCheck, CheckSquare, Square } from 'lucide-react';
+import { Lock, Mail, AlertCircle, ArrowRight, CheckSquare, Square, Sparkles } from 'lucide-react';
 
 export default function Login() {
   const [email, setEmail] = useState(() => localStorage.getItem('lumina_saved_email') || '');
@@ -12,8 +12,9 @@ export default function Login() {
   const [rememberMe, setRememberMe] = useState(() => localStorage.getItem('lumina_remember_me') !== 'false');
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
 
-  const { login } = useAuth();
+  const { login, loginWithGoogle } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -36,11 +37,32 @@ export default function Login() {
       else navigate(from, { replace: true });
     } catch (err) {
       console.error('Login error:', err);
-      const detail = err.response?.data?.detail;
-      const message = typeof detail === 'string' ? detail : (err.message || 'Invalid email or password.');
-      setError(message);
+      const detail = err.response?.data?.detail || err.message;
+      setError(typeof detail === 'string' ? detail : 'Invalid email or password.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setError(null);
+    setGoogleLoading(true);
+    try {
+      const u = await loginWithGoogle('CUSTOMER');
+      if (u.role === 'ADMIN') navigate('/admin', { replace: true });
+      else if (u.role === 'ORGANISER') navigate('/organiser', { replace: true });
+      else navigate(from || '/dashboard', { replace: true });
+    } catch (err) {
+      console.error('Google Sign-in error:', err);
+      if (err.code === 'auth/popup-closed-by-user') {
+        setError('Sign-in cancelled.');
+      } else if (err.code === 'auth/configuration-not-found' || err.message?.includes('API key')) {
+        setError('Firebase project configuration needed. Please add your Firebase API keys to .env');
+      } else {
+        setError(err.message || 'Google sign-in failed. Please try email/password.');
+      }
+    } finally {
+      setGoogleLoading(false);
     }
   };
 
@@ -78,17 +100,57 @@ export default function Login() {
           transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
           className="liquid-glass rounded-3xl p-8 border border-white/10 shadow-2xl backdrop-blur-2xl"
         >
-          <div className="text-center mb-8">
+          <div className="text-center mb-6">
             <h1 className="text-2xl font-black text-white tracking-tight">Sign In to Lumina</h1>
             <p className="text-xs text-slate-400 mt-1">Access your tickets, waitlists, and show reservations</p>
           </div>
 
           {error && (
-            <div className="mb-6 p-3.5 rounded-2xl bg-red-950/80 border border-red-800 text-red-300 text-xs flex items-center gap-2.5 shadow-lg">
+            <div className="mb-5 p-3.5 rounded-2xl bg-red-950/80 border border-red-800 text-red-300 text-xs flex items-center gap-2.5 shadow-lg">
               <AlertCircle className="w-4 h-4 shrink-0 text-red-400" />
               <span>{error}</span>
             </div>
           )}
+
+          {/* Google 1-Click Sign-In */}
+          <button
+            type="button"
+            onClick={handleGoogleSignIn}
+            disabled={googleLoading}
+            className="w-full py-3 rounded-2xl bg-white hover:bg-slate-100 text-slate-900 font-bold text-xs shadow-xl flex items-center justify-center gap-2.5 transition-all cursor-pointer mb-5 disabled:opacity-50"
+          >
+            {googleLoading ? (
+              <div className="animate-spin rounded-full h-4 w-4 border-2 border-slate-900 border-t-transparent" />
+            ) : (
+              <svg className="w-4 h-4" viewBox="0 0 24 24">
+                <path
+                  fill="#4285F4"
+                  d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"
+                />
+                <path
+                  fill="#34A853"
+                  d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24z"
+                />
+                <path
+                  fill="#FBBC05"
+                  d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.99 0 12s.45 3.82 1.25 5.42l4.03-3.15z"
+                />
+                <path
+                  fill="#EA4335"
+                  d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
+                />
+              </svg>
+            )}
+            <span>Continue with Google</span>
+          </button>
+
+          {/* Divider */}
+          <div className="relative flex items-center justify-center mb-5">
+            <div className="border-t border-white/10 w-full" />
+            <span className="bg-[#0c0c14] px-3 text-[10px] uppercase font-mono tracking-widest text-slate-500 relative">
+              OR EMAIL
+            </span>
+          </div>
 
           <form onSubmit={handleSubmit} autoComplete="on" className="space-y-4">
             <div>
@@ -98,7 +160,6 @@ export default function Login() {
                 <input
                   type="email"
                   name="email"
-                  id="email"
                   autoComplete="username"
                   required
                   value={email}
@@ -116,12 +177,11 @@ export default function Login() {
                 <input
                   type="password"
                   name="password"
-                  id="password"
                   autoComplete="current-password"
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
+                  placeholder="••••••••••••"
                   className="w-full bg-transparent text-sm text-slate-100 placeholder-slate-500 focus:outline-none"
                 />
               </div>
@@ -151,7 +211,7 @@ export default function Login() {
               {loading ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-                  Authenticating...
+                  Signing In...
                 </>
               ) : (
                 <>
@@ -161,31 +221,33 @@ export default function Login() {
             </button>
           </form>
 
-          {/* Quick Demo Credentials */}
+          {/* 1-Click Demo Accounts */}
           <div className="mt-8 pt-6 border-t border-white/10">
-            <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-1.5">
-              <UserCheck className="w-3.5 h-3.5 text-blue-400" />
-              1-Click Demo Accounts
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-blue-400" />
+                1-Click Demo Accounts
+              </span>
             </div>
             <div className="grid grid-cols-3 gap-2">
               <button
                 type="button"
-                onClick={() => handleQuickLogin('customer@ticketbooking.com', 'customer123')}
-                className="px-2 py-2 rounded-xl liquid-glass border border-white/10 hover:bg-white/10 text-[11px] font-semibold text-blue-300 transition-colors cursor-pointer"
+                onClick={() => handleQuickLogin('john@example.com', 'password123')}
+                className="px-2 py-2 rounded-xl bg-white/5 hover:bg-white/15 border border-white/10 text-xs font-bold text-slate-300 hover:text-white transition-all cursor-pointer"
               >
                 Customer
               </button>
               <button
                 type="button"
                 onClick={() => handleQuickLogin('organiser@ticketbooking.com', 'organiser123')}
-                className="px-2 py-2 rounded-xl liquid-glass border border-white/10 hover:bg-white/10 text-[11px] font-semibold text-purple-300 transition-colors cursor-pointer"
+                className="px-2 py-2 rounded-xl bg-white/5 hover:bg-white/15 border border-white/10 text-xs font-bold text-purple-300 hover:text-purple-200 transition-all cursor-pointer"
               >
                 Organiser
               </button>
               <button
                 type="button"
                 onClick={() => handleQuickLogin('admin@ticketbooking.com', 'admin123')}
-                className="px-2 py-2 rounded-xl liquid-glass border border-white/10 hover:bg-white/10 text-[11px] font-semibold text-amber-300 transition-colors cursor-pointer"
+                className="px-2 py-2 rounded-xl bg-white/5 hover:bg-white/15 border border-white/10 text-xs font-bold text-amber-400 hover:text-amber-300 transition-all cursor-pointer"
               >
                 Admin
               </button>
