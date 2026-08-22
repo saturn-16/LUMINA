@@ -142,7 +142,7 @@ export default function Footer() {
       <div className="pt-6 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4">
         {/* Left Curation Attribution */}
         <p className="text-[11px] uppercase tracking-widest text-white/50 font-mono">
-          Lumina • Live Experiences Across India
+          Lumina • Digital Reservation Engine
         </p>
 
         {/* Right GitHub Repository Link */}

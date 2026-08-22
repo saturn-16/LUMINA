@@ -155,11 +155,6 @@ export default function Home() {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-end">
             {/* Left Column: Editorial Typography */}
             <div className="lg:col-span-7">
-              <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest bg-white/10 text-white/80 border border-white/10 mb-5">
-                <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-                Live Experiences Across India
-              </span>
-
               <h1 className="text-4xl sm:text-6xl md:text-7xl font-normal tracking-[-0.05em] leading-[0.9] text-white">
                 Discover <br />
                 <span className="italic">what's happening.</span>
