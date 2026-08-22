@@ -1,14 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { useAuth } from '../context/AuthContext';
 import Navbar from '../components/Navbar';
 import GalaxyBackground from '../components/GalaxyBackground';
-import { Lock, Mail, AlertCircle, ArrowRight, UserCheck } from 'lucide-react';
+import { Lock, Mail, AlertCircle, ArrowRight, UserCheck, CheckSquare, Square } from 'lucide-react';
 
 export default function Login() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState(() => localStorage.getItem('lumina_saved_email') || '');
+  const [password, setPassword] = useState(() => localStorage.getItem('lumina_saved_password') || '');
+  const [rememberMe, setRememberMe] = useState(() => localStorage.getItem('lumina_remember_me') !== 'false');
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
 
@@ -24,7 +25,12 @@ export default function Login() {
     setLoading(true);
 
     try {
-      await login(email, password);
+      await login(email, password, rememberMe);
+      if (!rememberMe) {
+        localStorage.removeItem('lumina_saved_email');
+        localStorage.removeItem('lumina_saved_password');
+        localStorage.setItem('lumina_remember_me', 'false');
+      }
       navigate(from, { replace: true });
     } catch (err) {
       setError(err.response?.data?.detail || 'Invalid email or password.');
@@ -67,13 +73,16 @@ export default function Login() {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} autoComplete="on" className="space-y-4">
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1.5">Email Address</label>
               <div className="flex items-center gap-2 px-3.5 py-2.5 bg-black/60 rounded-xl border border-white/15 focus-within:border-blue-500 transition-colors">
                 <Mail className="w-4 h-4 text-slate-500 shrink-0" />
                 <input
                   type="email"
+                  name="email"
+                  id="email"
+                  autoComplete="username"
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -89,6 +98,9 @@ export default function Login() {
                 <Lock className="w-4 h-4 text-slate-500 shrink-0" />
                 <input
                   type="password"
+                  name="password"
+                  id="password"
+                  autoComplete="current-password"
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -96,6 +108,22 @@ export default function Login() {
                   className="w-full bg-transparent text-sm text-slate-100 placeholder-slate-500 focus:outline-none"
                 />
               </div>
+            </div>
+
+            {/* Remember Me Option */}
+            <div className="flex items-center justify-between pt-1">
+              <button
+                type="button"
+                onClick={() => setRememberMe(!rememberMe)}
+                className="flex items-center gap-2 text-xs text-slate-400 hover:text-slate-200 transition-colors cursor-pointer select-none"
+              >
+                {rememberMe ? (
+                  <CheckSquare className="w-4 h-4 text-blue-400" />
+                ) : (
+                  <Square className="w-4 h-4 text-slate-500" />
+                )}
+                <span>Remember my credentials</span>
+              </button>
             </div>
 
             <button
@@ -125,21 +153,21 @@ export default function Login() {
             <div className="grid grid-cols-3 gap-2">
               <button
                 type="button"
-                onClick={() => handleQuickLogin('alice@example.com', 'password123')}
+                onClick={() => handleQuickLogin('customer@ticketbooking.com', 'customer123')}
                 className="px-2 py-2 rounded-xl liquid-glass border border-white/10 hover:bg-white/10 text-[11px] font-semibold text-blue-300 transition-colors cursor-pointer"
               >
                 Customer
               </button>
               <button
                 type="button"
-                onClick={() => handleQuickLogin('organiser@example.com', 'password123')}
+                onClick={() => handleQuickLogin('organiser@ticketbooking.com', 'organiser123')}
                 className="px-2 py-2 rounded-xl liquid-glass border border-white/10 hover:bg-white/10 text-[11px] font-semibold text-purple-300 transition-colors cursor-pointer"
               >
                 Organiser
               </button>
               <button
                 type="button"
-                onClick={() => handleQuickLogin('admin@example.com', 'admin123')}
+                onClick={() => handleQuickLogin('admin@ticketbooking.com', 'admin123')}
                 className="px-2 py-2 rounded-xl liquid-glass border border-white/10 hover:bg-white/10 text-[11px] font-semibold text-amber-300 transition-colors cursor-pointer"
               >
                 Admin
@@ -157,7 +185,7 @@ export default function Login() {
       </div>
 
       <div className="relative z-10 py-6 text-center text-xs text-slate-600">
-        Lumina Ticketing Engine • Secure JWT Authentication
+        Lumina Ticketing Engine • Secure Session & Password Persistence
       </div>
     </div>
   );

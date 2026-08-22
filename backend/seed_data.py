@@ -473,5 +473,21 @@ async def seed_database():
         print("Database successfully seeded with 28 India-wide events across Movies, Concerts, Theatre, and Sports!")
 
 
+async def seed_if_empty():
+    """Seed the database only if the event catalogue is currently empty."""
+    from sqlalchemy import func, select
+    async with AsyncSessionLocal() as db:
+        try:
+            res = await db.execute(select(func.count(Event.id)))
+            count = res.scalar() or 0
+            if count == 0:
+                print("Event catalogue is empty. Auto-seeding 28 events...")
+                await seed_database()
+            else:
+                print(f"Database already contains {count} events. Skipping auto-seed.")
+        except Exception as e:
+            print(f"Auto-seed check: {e}")
+
+
 if __name__ == "__main__":
     asyncio.run(seed_database())

@@ -4,7 +4,7 @@ import { motion } from 'motion/react';
 import { useAuth } from '../context/AuthContext';
 import Navbar from '../components/Navbar';
 import GalaxyBackground from '../components/GalaxyBackground';
-import { Lock, Mail, User, AlertCircle, ArrowRight, Shield } from 'lucide-react';
+import { Lock, Mail, User, AlertCircle, ArrowRight, Shield, CheckSquare, Square } from 'lucide-react';
 
 export default function Register() {
   const [formData, setFormData] = useState({
@@ -13,6 +13,7 @@ export default function Register() {
     full_name: '',
     role: 'CUSTOMER',
   });
+  const [rememberMe, setRememberMe] = useState(true);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
 
@@ -25,7 +26,7 @@ export default function Register() {
     setLoading(true);
 
     try {
-      await register(formData);
+      await register(formData, rememberMe);
       navigate('/dashboard');
     } catch (err) {
       setError(err.response?.data?.detail || 'Registration failed. Please try again.');
@@ -63,13 +64,15 @@ export default function Register() {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} autoComplete="on" className="space-y-4">
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1.5">Full Name</label>
               <div className="flex items-center gap-2 px-3.5 py-2.5 bg-black/60 rounded-xl border border-white/15 focus-within:border-blue-500 transition-colors">
                 <User className="w-4 h-4 text-slate-500 shrink-0" />
                 <input
                   type="text"
+                  name="name"
+                  autoComplete="name"
                   required
                   value={formData.full_name}
                   onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
@@ -85,6 +88,8 @@ export default function Register() {
                 <Mail className="w-4 h-4 text-slate-500 shrink-0" />
                 <input
                   type="email"
+                  name="email"
+                  autoComplete="username"
                   required
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
@@ -100,6 +105,8 @@ export default function Register() {
                 <Lock className="w-4 h-4 text-slate-500 shrink-0" />
                 <input
                   type="password"
+                  name="password"
+                  autoComplete="new-password"
                   required
                   minLength={6}
                   value={formData.password}
@@ -124,6 +131,22 @@ export default function Register() {
                   <option value="ADMIN" className="bg-slate-900 text-white">Admin (Venues & System Management)</option>
                 </select>
               </div>
+            </div>
+
+            {/* Remember Me Option */}
+            <div className="flex items-center justify-between pt-1">
+              <button
+                type="button"
+                onClick={() => setRememberMe(!rememberMe)}
+                className="flex items-center gap-2 text-xs text-slate-400 hover:text-slate-200 transition-colors cursor-pointer select-none"
+              >
+                {rememberMe ? (
+                  <CheckSquare className="w-4 h-4 text-blue-400" />
+                ) : (
+                  <Square className="w-4 h-4 text-slate-500" />
+                )}
+                <span>Remember my credentials for fast sign in</span>
+              </button>
             </div>
 
             <button

@@ -56,7 +56,7 @@ class EmailService:
             logger.info(f"[EMAIL DISPATCHED] To: {to_email}")
             logger.info(f"[EMAIL DISPATCHED] Subject: {subject}")
             logger.info(f"[EMAIL DISPATCHED] Status: Delivered to local archive & logged (Configure SMTP_HOST in .env for live Gmail delivery)")
-            logger.info(f"[EMAIL DISPATCHED] Local File: {EMAILS_DIR / f'{(booking_reference or 'notification')}.html'}")
+            logger.info(f"[EMAIL DISPATCHED] Local File: {EMAILS_DIR / f'{ref_slug}.html'}")
             logger.info("=" * 60)
             return
 

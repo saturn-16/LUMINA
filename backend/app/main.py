@@ -26,7 +26,14 @@ async def lifespan(app: FastAPI):
     async with async_engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
-    # 2. Launch background expiry cleanup worker
+    # 2. Auto-seed event catalogue if empty
+    try:
+        from backend.seed_data import seed_if_empty
+        await seed_if_empty()
+    except Exception as e:
+        print(f"Auto-seeding check failed: {e}")
+
+    # 3. Launch background expiry cleanup worker
     worker_task = asyncio.create_task(run_expiry_cleanup_loop())
 
     yield

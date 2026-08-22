@@ -12,8 +12,18 @@ export default function Home() {
   const initialQuery = searchParams.get('query') || '';
   const initialCity = searchParams.get('city') || '';
 
-  const [events, setEvents] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [events, setEvents] = useState(() => {
+    try {
+      const cached = localStorage.getItem('lumina_events_cache');
+      return cached ? JSON.parse(cached) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [loading, setLoading] = useState(() => {
+    const cached = localStorage.getItem('lumina_events_cache');
+    return !cached;
+  });
   const [searchQuery, setSearchQuery] = useState(initialQuery);
   const [selectedType, setSelectedType] = useState(initialType);
   const [selectedCity, setSelectedCity] = useState(initialCity);
@@ -44,30 +54,58 @@ export default function Home() {
     setVisibleCount(8);
   }, [searchParams]);
 
-  // Fetch events on query/type/city change
+  // Fetch events on query/type/city change with persistent caching
   useEffect(() => {
-    async function fetchEvents() {
+    let isCancelled = false;
+
+    async function fetchEvents(retryCount = 0) {
       try {
-        setLoading(true);
         const params = {};
         if (selectedType !== 'ALL') params.event_type = selectedType;
         if (searchQuery.trim()) params.query = searchQuery.trim();
         if (selectedCity.trim() && selectedCity !== 'All Cities') params.city = selectedCity.trim();
 
         const res = await api.get('/events', { params });
-        setEvents(res.data);
+        if (!isCancelled && res.data && res.data.length > 0) {
+          setEvents(res.data);
+          // If browsing all events without filter, update global cache
+          if (selectedType === 'ALL' && !searchQuery && (!selectedCity || selectedCity === 'All Cities')) {
+            localStorage.setItem('lumina_events_cache', JSON.stringify(res.data));
+          }
+        } else if (!isCancelled && (!res.data || res.data.length === 0)) {
+          // If filtered query has no matches
+          setEvents(res.data || []);
+        }
       } catch (err) {
-        console.error('Failed to load events', err);
+        console.warn('Events fetch retry:', err);
+        if (retryCount < 2 && !isCancelled) {
+          setTimeout(() => fetchEvents(retryCount + 1), 800);
+          return;
+        }
+        // Fallback: If network fails, filter cached events locally
+        try {
+          const cached = localStorage.getItem('lumina_events_cache');
+          if (cached && !isCancelled) {
+            let filtered = JSON.parse(cached);
+            if (selectedType !== 'ALL') filtered = filtered.filter(e => e.event_type === selectedType);
+            if (selectedCity && selectedCity !== 'All Cities') filtered = filtered.filter(e => e.city === selectedCity);
+            if (searchQuery) filtered = filtered.filter(e => e.title?.toLowerCase().includes(searchQuery.toLowerCase()));
+            setEvents(filtered);
+          }
+        } catch {}
       } finally {
-        setLoading(false);
+        if (!isCancelled) setLoading(false);
       }
     }
 
     const timer = setTimeout(() => {
       fetchEvents();
-    }, 200);
+    }, 150);
 
-    return () => clearTimeout(timer);
+    return () => {
+      isCancelled = true;
+      clearTimeout(timer);
+    };
   }, [searchQuery, selectedType, selectedCity]);
 
   const handleTypeChange = (type) => {
