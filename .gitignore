@@ -38,6 +38,9 @@ dist-ssr/
 
 # Environment & local secrets
 .env
+.env*
+*.env*
+**/.env*
 .env.local
 .env.development.local
 .env.test.local
