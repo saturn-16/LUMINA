@@ -129,9 +129,9 @@ export default function ConcertAtmosphere() {
         className="absolute inset-0 z-[0] w-full h-full"
       >
         <img
-          src="/concert_stage_crowd_clean.png"
+          src="/concert_live_hero.jpg"
           alt="Live Concert Crowd and Stage"
-          className="w-full h-full object-cover object-center"
+          className="w-full h-full object-cover object-center sm:object-[center_30%]"
         />
         {/* Subtle warm amber/orange stage glow pulse */}
         <motion.div
