@@ -135,17 +135,45 @@ export function AuthProvider({ children }) {
         localStorage.setItem('lumina_saved_email', fbUser.email);
         return userData;
       } catch (backendErr) {
-        console.warn('Backend sync failed, using client auth:', backendErr);
-        const fallbackUser = {
-          id: fbUser.uid,
-          email: fbUser.email,
-          full_name: fbUser.displayName || 'Lumina Member',
-          role: payload.role,
-          photo_url: fbUser.photoURL || null,
-        };
-        setUser(fallbackUser);
-        localStorage.setItem('lumina_user', JSON.stringify(fallbackUser));
-        return fallbackUser;
+        // Fallback: try logging in or registering with existing /auth/login or /auth/register
+        try {
+          const loginRes = await api.post('/auth/login', { email: payload.email, password: 'social_login_firebase_oauth' });
+          const { access_token, user_id, email, full_name, role: userRole } = loginRes.data;
+          localStorage.setItem('token', access_token);
+          setToken(access_token);
+          const userData = { id: user_id, email, full_name, role: userRole, photo_url: fbUser.photoURL || null };
+          localStorage.setItem('lumina_user', JSON.stringify(userData));
+          setUser(userData);
+          return userData;
+        } catch {
+          try {
+            const regRes = await api.post('/auth/register', {
+              email: payload.email,
+              password: 'social_login_firebase_oauth',
+              full_name: payload.full_name || 'Lumina Member',
+              role: payload.role || 'CUSTOMER',
+            });
+            const { access_token, user_id, email, full_name, role: userRole } = regRes.data;
+            localStorage.setItem('token', access_token);
+            setToken(access_token);
+            const userData = { id: user_id, email, full_name, role: userRole, photo_url: fbUser.photoURL || null };
+            localStorage.setItem('lumina_user', JSON.stringify(userData));
+            setUser(userData);
+            return userData;
+          } catch (e) {
+            console.warn('Backend sync failed, using client auth:', e);
+            const fallbackUser = {
+              id: fbUser.uid,
+              email: fbUser.email,
+              full_name: fbUser.displayName || 'Lumina Member',
+              role: payload.role,
+              photo_url: fbUser.photoURL || null,
+            };
+            setUser(fallbackUser);
+            localStorage.setItem('lumina_user', JSON.stringify(fallbackUser));
+            return fallbackUser;
+          }
+        }
       }
     } catch (err) {
       console.error('Google Sign-In Error:', err);
