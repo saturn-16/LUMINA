@@ -35,7 +35,10 @@ export default function Login() {
       else if (u.role === 'ORGANISER' && from === '/dashboard') navigate('/organiser', { replace: true });
       else navigate(from, { replace: true });
     } catch (err) {
-      setError(err.response?.data?.detail || 'Invalid email or password.');
+      console.error('Login error:', err);
+      const detail = err.response?.data?.detail;
+      const message = typeof detail === 'string' ? detail : (err.message || 'Invalid email or password.');
+      setError(message);
     } finally {
       setLoading(false);
     }

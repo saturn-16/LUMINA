@@ -31,7 +31,10 @@ export default function Register() {
       else if (u.role === 'ORGANISER') navigate('/organiser', { replace: true });
       else navigate('/dashboard', { replace: true });
     } catch (err) {
-      setError(err.response?.data?.detail || 'Registration failed. Please try again.');
+      console.error('Registration error:', err);
+      const detail = err.response?.data?.detail;
+      const message = typeof detail === 'string' ? detail : (err.message || 'Registration failed. Please try again.');
+      setError(message);
     } finally {
       setLoading(false);
     }
