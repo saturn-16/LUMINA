@@ -7,6 +7,8 @@ from backend.app.models.venue import Venue
 from backend.app.models.seat import SeatCategory, VenueSeat, ShowSeat
 from backend.app.models.event import Event
 from backend.app.models.show import Show, ShowPricing
+from backend.app.models.booking import Booking, BookingSeat
+from backend.app.services.qr_service import generate_qr_code_data_uri
 
 
 async def seed_database():
@@ -424,6 +426,7 @@ async def seed_database():
                 is_sold_out_demo = (i == 15 and s_idx == 0)
                 is_few_seats_demo = (i == 3 and s_idx == 0)
 
+                created_show_seats = []
                 for s_num, vs in enumerate(seats):
                     seat_status = "AVAILABLE"
                     if is_sold_out_demo:
@@ -431,7 +434,40 @@ async def seed_database():
                     elif is_few_seats_demo and s_num > 5:
                         seat_status = "BOOKED"
 
-                    db.add(ShowSeat(show_id=show.id, venue_seat_id=vs.id, status=seat_status, version=1))
+                    ss = ShowSeat(show_id=show.id, venue_seat_id=vs.id, status=seat_status, version=1)
+                    db.add(ss)
+                    created_show_seats.append(ss)
+
+                await db.flush()
+
+                # For event 12 (Arijit Singh) and event 0 (Interstellar), book first 2 seats for customer1 demo account
+                if (i == 12 or i == 0) and s_idx == 0:
+                    created_show_seats[0].status = "BOOKED"
+                    created_show_seats[1].status = "BOOKED"
+                    ref_code = f"LMN-{'ARJ7' if i == 12 else 'INT9'}-8F92"
+                    qr_uri = generate_qr_code_data_uri({
+                        "booking_reference": ref_code,
+                        "event_title": ed["title"],
+                        "venue": ed["city_venue"],
+                        "seats": ["A1", "A2"],
+                        "holder": customer1.full_name,
+                    })
+                    demo_booking = Booking(
+                        booking_reference=ref_code,
+                        user_id=customer1.id,
+                        show_id=show.id,
+                        total_amount=round(ed["prices"][2] * 2, 2),
+                        status="CONFIRMED",
+                        qr_code_data=qr_uri,
+                        created_at=now - timedelta(days=2),
+                    )
+                    db.add(demo_booking)
+                    await db.flush()
+
+                    db.add_all([
+                        BookingSeat(booking_id=demo_booking.id, show_seat_id=created_show_seats[0].id, price_paid=ed["prices"][2]),
+                        BookingSeat(booking_id=demo_booking.id, show_seat_id=created_show_seats[1].id, price_paid=ed["prices"][2]),
+                    ])
 
         await db.commit()
         print("Database successfully seeded with 28 India-wide events across Movies, Concerts, Theatre, and Sports!")

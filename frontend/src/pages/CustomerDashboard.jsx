@@ -1,14 +1,30 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'motion/react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import TicketCard from '../components/TicketCard';
 import Navbar from '../components/Navbar';
-import GalaxyBackground from '../components/GalaxyBackground';
-import { Ticket, Clock, XCircle, AlertCircle, Sparkles, CheckCircle, RefreshCw, ArrowRight, UserCheck } from 'lucide-react';
+import Footer from '../components/Footer';
+import {
+  Ticket,
+  Calendar,
+  MapPin,
+  Clock,
+  QrCode,
+  ArrowUpRight,
+  RefreshCw,
+  AlertCircle,
+  CheckCircle2,
+  Sparkles,
+  ArrowRight,
+  ShieldCheck,
+  ChevronRight,
+  Flame,
+} from 'lucide-react';
 
 export default function CustomerDashboard() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [bookings, setBookings] = useState([]);
   const [waitlists, setWaitlists] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -22,8 +38,8 @@ export default function CustomerDashboard() {
         api.get('/bookings/my'),
         api.get('/waitlist'),
       ]);
-      setBookings(bookingsRes.data);
-      setWaitlists(waitlistsRes.data);
+      setBookings(bookingsRes.data || []);
+      setWaitlists(waitlistsRes.data || []);
     } catch (err) {
       console.error('Failed to load dashboard data', err);
     } finally {
@@ -36,7 +52,11 @@ export default function CustomerDashboard() {
   }, []);
 
   const handleCancelBooking = async (bookingId) => {
-    if (!window.confirm('Are you sure you want to cancel this booking? Released seats will be automatically reallocated to the waitlist queue.')) {
+    if (
+      !window.confirm(
+        'Are you sure you want to cancel this booking? Released seats will be automatically reallocated to the waitlist queue.'
+      )
+    ) {
       return;
     }
 
@@ -46,181 +66,601 @@ export default function CustomerDashboard() {
       setMessage({ type: 'success', text: res.data.message });
       fetchDashboardData();
     } catch (err) {
-      setMessage({ type: 'error', text: err.response?.data?.detail || 'Failed to cancel booking.' });
+      setMessage({
+        type: 'error',
+        text: err.response?.data?.detail || 'Failed to cancel booking.',
+      });
     } finally {
       setCancellingId(null);
     }
   };
 
+  const handleViewPasscard = (booking) => {
+    navigate('/confirmation', { state: { booking } });
+  };
+
+  // Format currency into INR ₹
+  const formatPrice = (val) => {
+    if (!val && val !== 0) return '₹0';
+    return `₹${Math.round(val).toLocaleString('en-IN')}`;
+  };
+
+  // Split bookings into upcoming vs past / cancelled
+  const now = new Date();
+  const activeBookings = bookings.filter((b) => b.status === 'CONFIRMED');
+  const pastOrCancelledBookings = bookings.filter(
+    (b) => b.status === 'CANCELLED' || new Date(b.show_start_time) < now
+  );
+
+  const primaryUpcoming = activeBookings.length > 0 ? activeBookings[0] : null;
+  const secondaryUpcoming = activeBookings.length > 1 ? activeBookings.slice(1) : [];
+
+  const firstName = user?.full_name?.split(' ')[0] || 'Member';
+
+  // Calculate statistics
+  const totalTickets = bookings.reduce((sum, b) => sum + (b.seats?.length || 0), 0);
+  const totalSpend = bookings
+    .filter((b) => b.status === 'CONFIRMED')
+    .reduce((sum, b) => sum + (b.total_amount || 0), 0);
+
   return (
-    <div className="relative min-h-screen text-slate-100 pb-24 overflow-x-hidden">
-      {/* Galaxy Background */}
-      <GalaxyBackground />
+    <div className="relative min-h-screen bg-[#050505] text-white font-sans selection:bg-white/20 selection:text-white pb-24 overflow-x-hidden">
+      {/* Subtle Atmospheric Dark Ambient Glow (No Starfield) */}
+      <div
+        className="fixed inset-0 pointer-events-none z-0"
+        style={{
+          background:
+            'radial-gradient(ellipse at 50% 0%, rgba(35, 35, 50, 0.4) 0%, rgba(5, 5, 5, 0.85) 60%, #000000 100%)',
+        }}
+      />
 
       {/* Header Bar */}
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="relative z-20 max-w-7xl mx-auto px-5 sm:px-8">
         <Navbar />
       </div>
 
-      <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
-        {/* Welcome Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-          <div>
-            <span className="text-xs uppercase tracking-widest text-blue-400 font-bold">Customer Portal</span>
-            <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight mt-0.5">
-              Welcome back, {user?.full_name || 'Guest'}
-            </h1>
-          </div>
-
-          <button
-            onClick={fetchDashboardData}
-            className="px-4 py-2 rounded-xl liquid-glass border border-white/10 hover:bg-white/10 text-xs font-semibold text-slate-300 transition-all flex items-center gap-1.5 self-start cursor-pointer"
+      <div className="relative z-10 max-w-7xl mx-auto px-5 sm:px-8 pt-4">
+        {/* Subtle Back Link */}
+        <div className="mb-6">
+          <Link
+            to="/events"
+            className="inline-flex items-center gap-2 text-xs uppercase tracking-widest text-white/50 hover:text-white transition-colors group cursor-pointer"
           >
-            <RefreshCw className="w-3.5 h-3.5" />
-            Refresh
-          </button>
+            <span className="transition-transform group-hover:-translate-x-1 font-mono">←</span>
+            <span>Discover Events</span>
+          </Link>
         </div>
 
-        {message && (
-          <div className={`mb-8 p-4 rounded-2xl border text-sm flex items-center gap-3 shadow-xl backdrop-blur-xl ${
-            message.type === 'success'
-              ? 'bg-emerald-950/80 border-emerald-800 text-emerald-300'
-              : 'bg-red-950/80 border-red-800 text-red-300'
-          }`}>
-            {message.type === 'success' ? <CheckCircle className="w-5 h-5 shrink-0" /> : <AlertCircle className="w-5 h-5 shrink-0" />}
-            <span>{message.text}</span>
+        {/* Editorial Page Header */}
+        <section className="mb-12">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+            <div>
+              <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest bg-white/10 text-white/80 border border-white/10 mb-4">
+                <ShieldCheck className="w-3.5 h-3.5 text-white/80" />
+                Personal Experience Wallet
+              </span>
+
+              <h1 className="text-4xl sm:text-6xl md:text-7xl font-normal tracking-[-0.05em] leading-[0.9] text-white">
+                {firstName}, <br />
+                <span className="italic text-white/90">what's next?</span>
+              </h1>
+
+              <p className="text-sm sm:text-base text-white/60 max-w-lg mt-4 leading-relaxed font-normal">
+                Your digital ticket passcards, seat reservations, and live entry archive across India.
+              </p>
+            </div>
+
+            {/* Right Action / Summary Bar */}
+            <div className="flex items-center gap-3">
+              {bookings.length > 0 && (
+                <div className="hidden sm:flex items-center gap-4 px-4 py-2 rounded-2xl liquid-glass border border-white/10 text-xs font-medium text-white/70">
+                  <span>
+                    <strong className="text-white font-bold">{activeBookings.length}</strong> Upcoming
+                  </span>
+                  <span className="text-white/20">•</span>
+                  <span>
+                    <strong className="text-white font-bold">{totalTickets}</strong> Passes
+                  </span>
+                  <span className="text-white/20">•</span>
+                  <span>
+                    <strong className="text-white font-bold">{formatPrice(totalSpend)}</strong>
+                  </span>
+                </div>
+              )}
+
+              <button
+                onClick={fetchDashboardData}
+                className="px-4 py-2.5 rounded-full liquid-glass border border-white/15 hover:bg-white/10 text-xs font-semibold text-white/80 hover:text-white transition-all flex items-center gap-2 cursor-pointer shadow-lg active:scale-95"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+                <span>Sync Passes</span>
+              </button>
+            </div>
           </div>
+        </section>
+
+        {/* Notifications & Feedback Alerts */}
+        {message && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className={`mb-8 p-4 rounded-2xl border text-xs sm:text-sm flex items-center gap-3 shadow-2xl backdrop-blur-xl ${
+              message.type === 'success'
+                ? 'bg-emerald-950/80 border-emerald-700/60 text-emerald-200'
+                : 'bg-red-950/80 border-red-800 text-red-200'
+            }`}
+          >
+            {message.type === 'success' ? (
+              <CheckCircle2 className="w-5 h-5 shrink-0 text-emerald-400" />
+            ) : (
+              <AlertCircle className="w-5 h-5 shrink-0 text-red-400" />
+            )}
+            <span>{message.text}</span>
+          </motion.div>
         )}
 
-        {/* Section 1: Active Waitlist Entries & Time-Limited Offers */}
+        {/* Section 1: Active Waitlists & Instant Queue Reallocation Offers */}
         {waitlists.length > 0 && (
-          <div className="mb-12">
-            <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-              <Clock className="w-5 h-5 text-purple-400" />
-              Active Waitlists & Instant Queue Reallocations
-            </h2>
+          <section className="mb-14">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xs uppercase tracking-widest font-bold text-amber-400 flex items-center gap-2">
+                <Sparkles className="w-4 h-4" />
+                Active Waitlist Queue & Auto-Reallocations
+              </h2>
+            </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {waitlists.map((wl) => (
                 <div
                   key={wl.id}
-                  className={`p-6 rounded-3xl border shadow-xl backdrop-blur-xl transition-all ${
+                  className={`p-6 rounded-3xl border shadow-2xl backdrop-blur-xl transition-all ${
                     wl.status === 'OFFERED'
-                      ? 'liquid-glass border-amber-500/80 ring-2 ring-amber-500/30'
+                      ? 'liquid-glass border-amber-500/80 bg-amber-950/20 ring-1 ring-amber-500/40'
                       : 'liquid-glass border-white/10'
                   }`}
                 >
                   <div className="flex items-start justify-between mb-3">
                     <div>
-                      <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">Show #{wl.show_id}</div>
-                      <div className="text-base font-black text-white mt-0.5">{wl.category_name} Tier</div>
+                      <div className="text-[10px] font-bold text-white/50 uppercase tracking-widest">
+                        Show #{wl.show_id}
+                      </div>
+                      <div className="text-base font-bold text-white mt-0.5">
+                        {wl.category_name} Tier Reservation
+                      </div>
                     </div>
-                    <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${
-                      wl.status === 'OFFERED'
-                        ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 animate-pulse'
-                        : 'bg-blue-500/20 text-blue-300 border border-blue-500/40'
-                    }`}>
-                      {wl.status === 'OFFERED' ? '⚡ Seat Offered!' : `Queue Position #${wl.queue_position}`}
+                    <span
+                      className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                        wl.status === 'OFFERED'
+                          ? 'bg-amber-400 text-black shadow-lg shadow-amber-500/30 animate-pulse'
+                          : 'bg-white/10 text-white/80 border border-white/10'
+                      }`}
+                    >
+                      {wl.status === 'OFFERED' ? '⚡ Seat Offered!' : `Queue #${wl.queue_position}`}
                     </span>
                   </div>
 
-                  {wl.status === 'OFFERED' && (
+                  {wl.status === 'OFFERED' ? (
                     <div className="mt-4 pt-4 border-t border-white/10">
-                      <p className="text-xs text-amber-300 mb-3">
-                        A released seat has been offered to you! You have an active claim window to complete checkout.
+                      <p className="text-xs text-amber-200/90 mb-4 leading-relaxed">
+                        A released seat has become available and is currently held for your account. Complete your claim before the TTL expiry.
                       </p>
                       <Link
                         to={`/waitlist/claim?token=${wl.offer_token}`}
-                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs shadow-lg shadow-amber-500/20 transition-all"
+                        className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-amber-400 hover:bg-amber-300 text-black font-bold text-xs shadow-lg transition-all"
                       >
-                        Claim Offered Seat Now <ArrowRight className="w-3.5 h-3.5" />
+                        <span>Claim Offered Seat</span>
+                        <ArrowRight className="w-3.5 h-3.5" />
                       </Link>
                     </div>
+                  ) : (
+                    <p className="text-xs text-white/50 mt-2">
+                      You are in line in the automated FIFO queue. When a booking is cancelled, seats are immediately offered to your account.
+                    </p>
                   )}
                 </div>
               ))}
             </div>
-          </div>
+          </section>
         )}
 
-        {/* Section 2: Confirmed Bookings & QR Passes */}
-        <div>
-          <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-            <Ticket className="w-5 h-5 text-blue-400" />
-            My Bookings & QR Entry Passes
-          </h2>
-
-          {loading ? (
-            <div className="grid grid-cols-1 gap-4">
-              {[1, 2].map((n) => (
-                <div key={n} className="h-48 rounded-3xl liquid-glass border border-white/10 animate-pulse"></div>
-              ))}
+        {/* Loading State */}
+        {loading ? (
+          <div className="space-y-8 animate-pulse">
+            <div className="h-[400px] rounded-3xl liquid-glass border border-white/10" />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="h-64 rounded-3xl liquid-glass border border-white/10" />
+              <div className="h-64 rounded-3xl liquid-glass border border-white/10" />
             </div>
-          ) : bookings.length === 0 ? (
-            <div className="p-12 text-center liquid-glass rounded-3xl border border-white/10">
-              <Ticket className="w-12 h-12 text-slate-600 mx-auto mb-3" />
-              <h3 className="text-base font-bold text-slate-300">No active bookings yet</h3>
-              <p className="text-xs text-slate-500 mt-1 mb-6">Browse movies and concerts to select your seats.</p>
-              <Link
-                to="/events"
-                className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-xs font-bold text-white shadow-lg"
-              >
-                Explore Events
-              </Link>
-            </div>
-          ) : (
-            <div className="space-y-8">
-              {bookings.map((b) => (
-                <div
-                  key={b.id}
-                  className="liquid-glass rounded-3xl p-6 sm:p-8 border border-white/10 shadow-2xl backdrop-blur-xl"
-                >
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-white/10">
-                    <div>
-                      <div className="text-xs text-slate-400 font-medium">
-                        Booking Ref: <strong className="text-slate-100">{b.booking_reference}</strong>
-                      </div>
-                      <div className="text-lg font-black text-white mt-1">
-                        ${b.total_amount.toFixed(2)} • {b.tickets?.length || 0} Tickets
-                      </div>
-                    </div>
+          </div>
+        ) : bookings.length === 0 ? (
+          /* =========================================================================
+             EDITORIAL EMPTY STATE (When customer has no bookings)
+             ========================================================================= */
+          <div className="py-20 text-left max-w-2xl">
+            <span className="text-xs uppercase tracking-widest text-white/40 font-bold mb-4 block">
+              Experience Archive
+            </span>
 
-                    <div className="flex items-center gap-3">
-                      <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
-                        b.status === 'CONFIRMED'
-                          ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                          : 'bg-red-500/20 text-red-300 border border-red-500/30'
-                      }`}>
-                        {b.status}
-                      </span>
+            <h2 className="text-3xl sm:text-5xl font-normal tracking-tight text-white leading-tight mb-4">
+              Your next night <br />
+              <span className="italic text-white/70">is still unwritten.</span>
+            </h2>
 
-                      {b.status === 'CONFIRMED' && (
-                        <button
-                          onClick={() => handleCancelBooking(b.id)}
-                          disabled={cancellingId === b.id}
-                          className="px-3.5 py-1.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 text-xs font-bold transition-all disabled:opacity-50 cursor-pointer"
-                        >
-                          {cancellingId === b.id ? 'Cancelling...' : 'Cancel Booking'}
-                        </button>
-                      )}
-                    </div>
-                  </div>
+            <p className="text-sm sm:text-base text-white/60 leading-relaxed mb-8 max-w-lg font-normal">
+              You haven't booked an experience yet. Discover premier cinema screenings, stadium concerts, and live festivals across India worth remembering.
+            </p>
 
-                  {/* Individual E-Tickets */}
-                  <div className="mt-6 space-y-4">
-                    {b.tickets?.map((t) => (
-                      <TicketCard
-                        key={t.id}
-                        ticket={t}
-                        bookingReference={b.booking_reference}
+            <Link
+              to="/events"
+              className="inline-flex items-center gap-2.5 px-8 py-3.5 rounded-full bg-white text-black font-semibold text-xs uppercase tracking-wider hover:bg-white/90 transition-all shadow-2xl hover:scale-[1.02] cursor-pointer"
+            >
+              <span>Explore Experiences</span>
+              <ArrowUpRight className="w-4 h-4" />
+            </Link>
+          </div>
+        ) : (
+          <div className="space-y-16">
+            {/* =========================================================================
+                1. PRIMARY UPCOMING EXPERIENCE (Widescreen Cinematic Digital Ticket)
+               ========================================================================= */}
+            {primaryUpcoming && (
+              <section>
+                <div className="flex items-center justify-between mb-4">
+                  <span className="text-xs uppercase tracking-widest font-bold text-white/50 flex items-center gap-2">
+                    <Flame className="w-4 h-4 text-amber-400" />
+                    Next Experience
+                  </span>
+                  <span className="text-xs font-mono text-white/40 uppercase">
+                    Ref #{primaryUpcoming.booking_reference}
+                  </span>
+                </div>
+
+                <div className="group relative rounded-3xl overflow-hidden liquid-glass border border-white/15 hover:border-white/25 shadow-2xl transition-all duration-500">
+                  <div className="grid grid-cols-1 lg:grid-cols-12 min-h-[380px]">
+                    {/* Left 8 Cols: Event Poster & Integrated Ticket Details */}
+                    <div className="lg:col-span-8 relative p-6 sm:p-10 flex flex-col justify-between overflow-hidden bg-black">
+                      {/* Background Poster Image */}
+                      <img
+                        src={
+                          primaryUpcoming.event_banner_url ||
+                          'https://image.tmdb.org/t/p/w1280/xJHokMbljvjADYdit5fK5VQsXEG.jpg'
+                        }
+                        alt={primaryUpcoming.event_title}
+                        onError={(e) => {
+                          e.currentTarget.onerror = null;
+                          e.currentTarget.src =
+                            'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=1600&auto=format&fit=crop&q=80';
+                        }}
+                        className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out opacity-60"
                       />
-                    ))}
+
+                      {/* Multi-Stop Gradient Overlays */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/80 to-black/30" />
+                      <div className="absolute inset-0 bg-gradient-to-r from-black via-black/70 to-transparent" />
+
+                      {/* Top Badges */}
+                      <div className="relative z-10 flex flex-wrap items-center gap-2 mb-6">
+                        <span className="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 backdrop-blur-md">
+                          Confirmed Pass
+                        </span>
+                        <span className="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest bg-white/20 text-white backdrop-blur-md border border-white/20">
+                          {primaryUpcoming.event_type}
+                        </span>
+                        <span className="px-3 py-1 rounded-full text-[10px] font-medium text-white/80 bg-black/60 backdrop-blur-md border border-white/10 flex items-center gap-1">
+                          <MapPin className="w-2.5 h-2.5 text-white/50" />
+                          {primaryUpcoming.venue_city}
+                        </span>
+                      </div>
+
+                      {/* Title & Metadata */}
+                      <div className="relative z-10 mb-8">
+                        <h2 className="text-2xl sm:text-4xl md:text-5xl font-normal tracking-tight text-white leading-tight mb-4 group-hover:text-white/95 transition-colors">
+                          {primaryUpcoming.event_title}
+                        </h2>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs text-white/80 pt-4 border-t border-white/15">
+                          <div className="flex items-center gap-2">
+                            <Calendar className="w-4 h-4 text-white/50 shrink-0" />
+                            <span>
+                              {new Date(primaryUpcoming.show_start_time).toLocaleDateString('en-US', {
+                                weekday: 'short',
+                                month: 'short',
+                                day: 'numeric',
+                                year: 'numeric',
+                              })}{' '}
+                              •{' '}
+                              {new Date(primaryUpcoming.show_start_time).toLocaleTimeString('en-US', {
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <MapPin className="w-4 h-4 text-white/50 shrink-0" />
+                            <span className="truncate">{primaryUpcoming.venue_name}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Bottom Ticket Row */}
+                      <div className="relative z-10 pt-4 border-t border-white/15 flex flex-wrap items-center justify-between gap-4">
+                        <div>
+                          <div className="text-[10px] uppercase tracking-widest text-white/40 mb-1">
+                            Reserved Seats
+                          </div>
+                          <div className="flex flex-wrap gap-1.5">
+                            {primaryUpcoming.seats?.map((seat) => (
+                              <span
+                                key={seat.id || seat.show_seat_id}
+                                className="px-2.5 py-0.5 rounded-lg bg-white/15 border border-white/20 text-xs font-semibold text-white backdrop-blur-md"
+                              >
+                                {seat.row_label}
+                                {seat.seat_number}{' '}
+                                <span className="text-[10px] text-white/60 font-normal">
+                                  ({seat.category_name})
+                                </span>
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-4">
+                          <button
+                            onClick={() => handleViewPasscard(primaryUpcoming)}
+                            className="px-5 py-2.5 rounded-full bg-white text-black text-xs font-bold tracking-wide hover:bg-white/90 transition-all flex items-center gap-1.5 cursor-pointer shadow-xl hover:translate-x-0.5"
+                          >
+                            <span>View Passcard</span>
+                            <ArrowUpRight className="w-3.5 h-3.5" />
+                          </button>
+
+                          <button
+                            onClick={() => handleCancelBooking(primaryUpcoming.id)}
+                            disabled={cancellingId === primaryUpcoming.id}
+                            className="text-xs text-white/40 hover:text-red-400 transition-colors cursor-pointer"
+                          >
+                            {cancellingId === primaryUpcoming.id ? 'Reallocating...' : 'Cancel Booking'}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Right 4 Cols: Perforated Digital QR Pass Gate */}
+                    <div className="lg:col-span-4 p-8 bg-black/90 flex flex-col items-center justify-center text-center border-t lg:border-t-0 lg:border-l border-white/10 relative">
+                      <div className="p-3 bg-white rounded-2xl shadow-2xl mb-4">
+                        {primaryUpcoming.qr_code_data ? (
+                          <img
+                            src={primaryUpcoming.qr_code_data}
+                            alt={`QR pass for ${primaryUpcoming.booking_reference}`}
+                            className="w-36 h-36 sm:w-44 sm:h-44 object-contain"
+                          />
+                        ) : (
+                          <div className="w-36 h-36 sm:w-44 sm:h-44 bg-slate-100 flex items-center justify-center text-slate-800">
+                            <QrCode className="w-16 h-16" />
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="text-xs font-mono font-bold text-white tracking-wider mb-1">
+                        {primaryUpcoming.booking_reference}
+                      </div>
+
+                      <p className="text-[11px] text-white/50 max-w-[200px] leading-tight">
+                        Present this high-contrast QR pass at venue turnstiles for instant admission.
+                      </p>
+                    </div>
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
+              </section>
+            )}
+
+            {/* =========================================================================
+                2. SECONDARY UPCOMING EXPERIENCES (Editorial Ticket Rail)
+               ========================================================================= */}
+            {secondaryUpcoming.length > 0 && (
+              <section>
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-2xl sm:text-3xl font-normal tracking-tight text-white">
+                    Coming <span className="italic text-white/70">next</span>
+                  </h2>
+                  <span className="text-xs uppercase tracking-widest text-white/40 font-mono">
+                    {secondaryUpcoming.length} Upcoming Passes
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {secondaryUpcoming.map((b) => (
+                    <div
+                      key={b.id}
+                      className="group relative rounded-3xl overflow-hidden liquid-glass border border-white/10 hover:border-white/25 shadow-xl transition-all duration-500 flex flex-col justify-between"
+                    >
+                      {/* Top Poster Aspect */}
+                      <div className="relative h-48 sm:h-56 w-full overflow-hidden bg-black">
+                        <img
+                          src={
+                            b.event_banner_url ||
+                            'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=1000&auto=format&fit=crop&q=80'
+                          }
+                          alt={b.event_title}
+                          onError={(e) => {
+                            e.currentTarget.onerror = null;
+                            e.currentTarget.src =
+                              'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=1600&auto=format&fit=crop&q=80';
+                          }}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out opacity-75"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent" />
+
+                        <div className="absolute top-4 left-4 flex items-center gap-1.5">
+                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest bg-white/20 text-white backdrop-blur-md border border-white/20">
+                            {b.event_type}
+                          </span>
+                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-medium text-white/80 bg-black/60 backdrop-blur-md border border-white/10">
+                            {b.venue_city}
+                          </span>
+                        </div>
+
+                        <div className="absolute bottom-4 left-4 right-4">
+                          <h3 className="text-xl font-normal text-white leading-tight truncate">
+                            {b.event_title}
+                          </h3>
+                        </div>
+                      </div>
+
+                      {/* Ticket Body */}
+                      <div className="p-6 flex-1 flex flex-col justify-between">
+                        <div className="space-y-2 text-xs text-white/70 mb-6">
+                          <div className="flex items-center gap-2">
+                            <Calendar className="w-3.5 h-3.5 text-white/40 shrink-0" />
+                            <span>
+                              {new Date(b.show_start_time).toLocaleDateString('en-US', {
+                                weekday: 'short',
+                                month: 'short',
+                                day: 'numeric',
+                              })}{' '}
+                              •{' '}
+                              {new Date(b.show_start_time).toLocaleTimeString('en-US', {
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <MapPin className="w-3.5 h-3.5 text-white/40 shrink-0" />
+                            <span className="truncate">{b.venue_name}</span>
+                          </div>
+
+                          <div className="flex items-center gap-2 pt-2">
+                            <Ticket className="w-3.5 h-3.5 text-white/40 shrink-0" />
+                            <div className="flex flex-wrap gap-1">
+                              {b.seats?.map((s) => (
+                                <span
+                                  key={s.id || s.show_seat_id}
+                                  className="px-2 py-0.5 rounded bg-white/10 text-[10px] font-medium text-white"
+                                >
+                                  {s.row_label}
+                                  {s.seat_number}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="pt-4 border-t border-white/10 flex items-center justify-between">
+                          <div className="text-xs font-mono text-white/50">#{b.booking_reference}</div>
+
+                          <div className="flex items-center gap-3">
+                            <button
+                              onClick={() => handleViewPasscard(b)}
+                              className="px-4 py-1.5 rounded-full bg-white text-black text-xs font-semibold hover:bg-white/90 transition-all flex items-center gap-1 cursor-pointer"
+                            >
+                              <span>View Pass</span>
+                              <ArrowUpRight className="w-3 h-3" />
+                            </button>
+                            <button
+                              onClick={() => handleCancelBooking(b.id)}
+                              disabled={cancellingId === b.id}
+                              className="text-xs text-white/40 hover:text-red-400 transition-colors cursor-pointer"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* =========================================================================
+                3. PAST EXPERIENCES & ARCHIVE (Cinematic Visual Cards)
+               ========================================================================= */}
+            {pastOrCancelledBookings.length > 0 && (
+              <section className="pt-4">
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h2 className="text-2xl sm:text-3xl font-normal tracking-tight text-white">
+                      Experience <span className="italic text-white/70">archive</span>
+                    </h2>
+                  </div>
+                  <span className="text-xs uppercase tracking-widest text-white/40 font-mono">
+                    {pastOrCancelledBookings.length} Recorded Nights
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {pastOrCancelledBookings.map((pb) => {
+                    const isCancelled = pb.status === 'CANCELLED';
+                    return (
+                      <div
+                        key={pb.id}
+                        className={`rounded-3xl overflow-hidden liquid-glass border transition-all duration-300 ${
+                          isCancelled
+                            ? 'border-red-900/30 opacity-70 bg-red-950/10'
+                            : 'border-white/10 opacity-85 hover:opacity-100'
+                        }`}
+                      >
+                        <div className="relative h-44 w-full overflow-hidden bg-black">
+                          <img
+                            src={
+                              pb.event_banner_url ||
+                              'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=800&auto=format&fit=crop&q=80'
+                            }
+                            alt={pb.event_title}
+                            onError={(e) => {
+                              e.currentTarget.onerror = null;
+                              e.currentTarget.src =
+                                'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=1600&auto=format&fit=crop&q=80';
+                            }}
+                            className="w-full h-full object-cover grayscale-[30%]"
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent" />
+
+                          <div className="absolute top-3 left-3">
+                            <span
+                              className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                                isCancelled
+                                  ? 'bg-red-500/20 text-red-300 border border-red-500/30'
+                                  : 'bg-white/10 text-white/80 border border-white/10'
+                              }`}
+                            >
+                              {isCancelled ? 'Booking Cancelled' : 'Past Experience'}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="p-5">
+                          <h4 className="text-base font-normal text-white truncate mb-1">
+                            {pb.event_title}
+                          </h4>
+                          <p className="text-xs text-white/50 mb-3">
+                            {pb.venue_city} •{' '}
+                            {new Date(pb.show_start_time).toLocaleDateString('en-US', {
+                              month: 'short',
+                              year: 'numeric',
+                            })}
+                          </p>
+
+                          <div className="pt-3 border-t border-white/10 flex items-center justify-between text-xs text-white/40 font-mono">
+                            <span>#{pb.booking_reference}</span>
+                            <span>{formatPrice(pb.total_amount)}</span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Editorial Liquid Glass Footer */}
+      <div className="relative z-10 max-w-7xl mx-auto px-5 sm:px-8 mt-20">
+        <Footer />
       </div>
     </div>
   );

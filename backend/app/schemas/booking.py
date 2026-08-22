@@ -26,6 +26,8 @@ class BookingResponse(BaseModel):
     show_id: int
     event_title: str
     event_type: str
+    event_id: Optional[int] = None
+    event_banner_url: Optional[str] = None
     venue_name: str
     venue_city: str
     show_start_time: datetime
