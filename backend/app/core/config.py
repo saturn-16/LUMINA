@@ -4,10 +4,15 @@ from pydantic_settings import BaseSettings
 from pydantic import field_validator
 
 
+_is_serverless = bool(os.environ.get("VERCEL") or os.environ.get("AWS_LAMBDA_FUNCTION_NAME"))
+_default_db = "sqlite+aiosqlite:////tmp/ticket_booking.db" if _is_serverless else "sqlite+aiosqlite:///./ticket_booking.db"
+_default_sync_db = "sqlite:////tmp/ticket_booking.db" if _is_serverless else "sqlite:///./ticket_booking.db"
+
+
 class Settings(BaseSettings):
     PROJECT_NAME: str = "Ticket Booking System"
-    DATABASE_URL: str = "sqlite+aiosqlite:///./ticket_booking.db"
-    SYNC_DATABASE_URL: str = "sqlite:///./ticket_booking.db"
+    DATABASE_URL: str = _default_db
+    SYNC_DATABASE_URL: str = _default_sync_db
     
     SECRET_KEY: str = "development-secret-key-please-change-in-production-min32"
     ALGORITHM: str = "HS256"
