@@ -2,14 +2,8 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { LuminaLogo } from './Navbar';
-import {
-  Layers,
-  Cpu,
-  ArrowUpRight,
-  Code2,
-} from 'lucide-react';
 
-function GithubIcon({ className = 'w-3.5 h-3.5' }) {
+function GithubIcon({ className = 'w-4 h-4' }) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -27,51 +21,29 @@ function GithubIcon({ className = 'w-3.5 h-3.5' }) {
 }
 
 export default function Footer() {
-  const techStack = [
-    'FastAPI (Python 3.11)',
-    'SQLAlchemy Async',
-    'PostgreSQL / SQLite',
-    'React 19 + Vite',
-    'Tailwind CSS',
-    'WebSockets',
+  const cities = ['Mumbai', 'Delhi', 'Bengaluru', 'Hyderabad', 'Pune'];
+
+  const discoverLinks = [
+    { label: 'Movies & Concerts', to: '/events' },
+    { label: 'Live Experiences', to: '/events' },
+    { label: 'Cities', to: '/events' },
+    { label: 'Popular Events', to: '/events' },
+    { label: 'Coming Soon', to: '/events' },
   ];
 
-  const systemFeatures = [
-    { label: 'High-Concurrency Seat Holds (TTL)', to: '/events' },
-    { label: 'Distributed Pessimistic Locking', to: '/events' },
-    { label: 'Automated FIFO Waitlist Reallocation', to: '/dashboard' },
-    { label: 'Real-Time WebSocket Seat Mesh', to: '/events' },
-    { label: 'Cryptographic QR Entry Passes', to: '/dashboard' },
+  const platformLinks = [
+    { label: 'How It Works', to: '/' },
+    { label: 'Seat Selection', to: '/events' },
+    { label: 'My Tickets', to: '/dashboard' },
+    { label: 'Waitlist System', to: '/dashboard' },
+    { label: 'For Organisers', to: '/organiser' },
   ];
 
-  const rolePortals = [
-    { label: 'Customer Experience Wallet', to: '/dashboard' },
-    { label: 'Live Events Discovery', to: '/events' },
-    { label: 'Organiser Studio Portal', to: '/organiser' },
-    { label: 'System Admin Console', to: '/admin' },
-  ];
-
-  const devResources = [
-    {
-      label: 'GitHub Repository',
-      href: 'https://github.com/saturn-16/Ticket-Booking',
-      external: true,
-    },
-    {
-      label: 'FastAPI Interactive Docs',
-      href: 'http://127.0.0.1:8000/docs',
-      external: true,
-    },
-    {
-      label: 'OpenAPI Specification',
-      href: 'http://127.0.0.1:8000/openapi.json',
-      external: true,
-    },
-    {
-      label: 'Backend Health Check',
-      href: 'http://127.0.0.1:8000/api/health',
-      external: true,
-    },
+  const conciergeLinks = [
+    { label: 'My Experience Wallet', to: '/dashboard' },
+    { label: 'Live Event Support', to: '/dashboard' },
+    { label: 'Organiser Studio', to: '/organiser' },
+    { label: 'Admin Portal', to: '/admin' },
   ];
 
   return (
@@ -86,105 +58,79 @@ export default function Footer() {
       className="liquid-glass w-full rounded-3xl p-6 md:p-10 text-white/70 mt-28 md:mt-48 shadow-2xl relative z-10 border border-white/10"
     >
       {/* Top Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 mb-10">
-        {/* First Column: Project Identity & Tech Stack */}
-        <div className="lg:col-span-4 flex flex-col justify-between">
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-10 md:gap-12 mb-10">
+        {/* First Column: Brand Info */}
+        <div className="md:col-span-5 flex flex-col justify-between">
           <div>
-            <Link
-              to="/"
-              className="flex items-center gap-2.5 text-white mb-3 hover:opacity-90 transition-opacity"
-            >
+            <Link to="/" className="flex items-center gap-2.5 text-white mb-4 hover:opacity-90 transition-opacity">
               <LuminaLogo className="w-6 h-6 text-white" />
               <span className="text-xl font-medium tracking-tight">LUMINA</span>
-              <span className="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-white/15 text-white/90 border border-white/20 ml-1">
-                Project v1.0
-              </span>
             </Link>
 
-            <p className="text-xs sm:text-sm leading-relaxed text-white/70 mb-5 font-normal">
-              An open-source high-concurrency ticket reservation engine featuring distributed pessimistic locking, automated FIFO waitlist reallocations, and server-side QR passes.
+            <p className="text-sm leading-relaxed max-w-sm text-white/70 mb-6 font-normal">
+              Lumina brings premium clarity to movies, concerts and live experiences across India — helping you find the moments worth showing up for.
             </p>
 
-            {/* Tech Stack Pills */}
-            <div className="flex items-center gap-1.5 flex-wrap">
-              {techStack.map((tech) => (
-                <span
-                  key={tech}
-                  className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-medium text-white/80 bg-white/5 border border-white/10"
+            {/* City Pills */}
+            <div className="flex items-center gap-2 flex-wrap">
+              {cities.map((city) => (
+                <Link
+                  key={city}
+                  to={`/events?city=${city}`}
+                  className="liquid-glass rounded-full px-3.5 py-1 text-[11px] font-medium text-white/70 hover:text-white hover:bg-white/10 transition-colors border border-white/10"
                 >
-                  {tech}
-                </span>
+                  {city}
+                </Link>
               ))}
             </div>
           </div>
         </div>
 
         {/* Links Columns (3 Columns) */}
-        <div className="lg:col-span-8 grid grid-cols-1 sm:grid-cols-3 gap-8">
-          {/* Column 1: Core Architecture */}
+        <div className="md:col-span-7 grid grid-cols-1 sm:grid-cols-3 gap-8">
+          {/* Column 1: Discover */}
           <div>
-            <h4 className="text-xs uppercase tracking-widest text-white font-bold mb-4 flex items-center gap-1.5">
-              <Layers className="w-3.5 h-3.5 text-white/60" />
-              Architecture
+            <h4 className="text-xs uppercase tracking-widest text-white font-semibold mb-4">
+              Discover
             </h4>
             <ul className="space-y-2.5 text-xs text-white/70 font-normal">
-              {systemFeatures.map((item) => (
-                <li key={item.label}>
-                  <Link
-                    to={item.to}
-                    className="hover:text-white transition-colors flex items-center justify-between group"
-                  >
-                    <span>{item.label}</span>
-                    <span className="opacity-0 group-hover:opacity-100 transition-opacity text-[10px] text-white/40">
-                      ↗
-                    </span>
+              {discoverLinks.map((link) => (
+                <li key={link.label}>
+                  <Link to={link.to} className="hover:text-white transition-colors">
+                    {link.label}
                   </Link>
                 </li>
               ))}
             </ul>
           </div>
 
-          {/* Column 2: Role Portals */}
+          {/* Column 2: The Platform */}
           <div>
-            <h4 className="text-xs uppercase tracking-widest text-white font-bold mb-4 flex items-center gap-1.5">
-              <Cpu className="w-3.5 h-3.5 text-white/60" />
-              Role Portals
+            <h4 className="text-xs uppercase tracking-widest text-white font-semibold mb-4">
+              The Platform
             </h4>
             <ul className="space-y-2.5 text-xs text-white/70 font-normal">
-              {rolePortals.map((item) => (
-                <li key={item.label}>
-                  <Link
-                    to={item.to}
-                    className="hover:text-white transition-colors flex items-center justify-between group"
-                  >
-                    <span>{item.label}</span>
-                    <span className="opacity-0 group-hover:opacity-100 transition-opacity text-[10px] text-white/40">
-                      ↗
-                    </span>
+              {platformLinks.map((link) => (
+                <li key={link.label}>
+                  <Link to={link.to} className="hover:text-white transition-colors">
+                    {link.label}
                   </Link>
                 </li>
               ))}
             </ul>
           </div>
 
-          {/* Column 3: Dev & Source */}
+          {/* Column 3: Concierge */}
           <div>
-            <h4 className="text-xs uppercase tracking-widest text-white font-bold mb-4 flex items-center gap-1.5">
-              <Code2 className="w-3.5 h-3.5 text-white/60" />
-              Repository & API
+            <h4 className="text-xs uppercase tracking-widest text-white font-semibold mb-4">
+              Concierge
             </h4>
             <ul className="space-y-2.5 text-xs text-white/70 font-normal">
-              {devResources.map((item) => (
-                <li key={item.label}>
-                  <a
-                    href={item.href}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="hover:text-white transition-colors flex items-center justify-between group"
-                  >
-                    <span>{item.label}</span>
-                    <ArrowUpRight className="w-3 h-3 text-white/40 group-hover:text-white transition-colors" />
-                  </a>
+              {conciergeLinks.map((link) => (
+                <li key={link.label}>
+                  <Link to={link.to} className="hover:text-white transition-colors">
+                    {link.label}
+                  </Link>
                 </li>
               ))}
             </ul>
@@ -194,26 +140,23 @@ export default function Footer() {
 
       {/* Footer Bottom Bar */}
       <div className="pt-6 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4">
-        {/* Left Author Attribution */}
-        <div className="flex items-center gap-2 text-[11px] text-white/60 font-mono">
-          <span>Project by</span>
-          <span className="font-bold text-white">Gaurav Kumar</span>
-          <span className="text-white/20">•</span>
+        {/* Left Curation Attribution */}
+        <p className="text-[11px] uppercase tracking-widest text-white/50 font-mono">
+          Lumina • Live Experiences Across India
+        </p>
+
+        {/* Right GitHub Repository Link */}
+        <div>
           <a
             href="https://github.com/saturn-16/Ticket-Booking"
             target="_blank"
             rel="noreferrer"
-            className="hover:text-white transition-colors inline-flex items-center gap-1 underline underline-offset-4 decoration-white/20 hover:decoration-white"
+            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full liquid-glass border border-white/15 hover:bg-white/10 text-xs font-mono text-white/80 hover:text-white transition-all shadow-md group"
           >
-            <GithubIcon className="w-3.5 h-3.5" />
+            <GithubIcon className="w-3.5 h-3.5 opacity-70 group-hover:opacity-100 transition-opacity" />
             <span>GitHub Repository</span>
+            <span className="font-sans text-[10px] text-white/40 group-hover:text-white transition-colors">↗</span>
           </a>
-        </div>
-
-        {/* Right Status Pill */}
-        <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-[10px] font-mono text-white/70">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-          <span>FastAPI Engine Operational</span>
         </div>
       </div>
     </motion.footer>
