@@ -11,26 +11,21 @@ import {
 } from '@firebase/auth';
 
 // Your web app's Firebase configuration
-// These values can be set in your .env file or Vercel Environment Variables:
-// VITE_FIREBASE_API_KEY, VITE_FIREBASE_AUTH_DOMAIN, etc.
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyDummyKeyForFallbackOnly123456",
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "lumina-ticket-booking.firebaseapp.com",
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "lumina-ticket-booking",
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "lumina-ticket-booking.appspot.com",
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "123456789012",
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:123456789012:web:abcdef1234567890",
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyBEgyWBg3UmCUIf8t6Lryh699k8tEvmjLw",
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "lumina-t.firebaseapp.com",
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "lumina-t",
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "lumina-t.firebasestorage.app",
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "521210059104",
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:521210059104:web:ef0cbff6edc939cb886605",
 };
 
-// Initialize Firebase safely (avoid multiple initializations)
+// Initialize Firebase safely
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 const auth = getAuth(app);
 const googleProvider = new GoogleAuthProvider();
 
-export const isFirebaseConfigured = Boolean(
-  import.meta.env.VITE_FIREBASE_API_KEY &&
-  !import.meta.env.VITE_FIREBASE_API_KEY.includes("Dummy")
-);
+export const isFirebaseConfigured = true;
 
 export {
   auth,
