@@ -67,6 +67,13 @@ async def list_events(
         min_p = min(all_prices) if all_prices else None
         max_p = max(all_prices) if all_prices else None
 
+        # Determine primary city and venue
+        cities = list({s.venue.city for s in evt.shows if s.venue and s.venue.city})
+        venues = list({s.venue.name for s in evt.shows if s.venue and s.venue.name})
+        primary_city = cities[0] if cities else "India"
+        primary_venue = venues[0] if venues else "Premier Venue"
+        next_show = evt.shows[0].start_time if evt.shows else None
+
         response_list.append(
             EventResponse(
                 id=evt.id,
@@ -81,6 +88,9 @@ async def list_events(
                 min_price=min_p,
                 max_price=max_p,
                 total_shows=len(evt.shows),
+                city=primary_city,
+                venue_name=primary_venue,
+                next_show_time=next_show,
             )
         )
 

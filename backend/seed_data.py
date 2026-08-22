@@ -10,13 +10,13 @@ from backend.app.models.show import Show, ShowPricing
 
 
 async def seed_database():
-    print("Initializing tables...")
+    print("Initializing database tables...")
     async with async_engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
         await conn.run_sync(Base.metadata.create_all)
 
     async with AsyncSessionLocal() as db:
-        print("Creating users...")
+        print("Creating users & organisers...")
         admin = User(
             email="admin@ticketbooking.com",
             password_hash=get_password_hash("admin123"),
@@ -27,7 +27,7 @@ async def seed_database():
         organiser = User(
             email="organiser@ticketbooking.com",
             password_hash=get_password_hash("organiser123"),
-            full_name="Apex Live Events",
+            full_name="Lumina Live India",
             role="ORGANISER",
             created_at=datetime.now(timezone.utc),
         )
@@ -41,190 +41,400 @@ async def seed_database():
         customer2 = User(
             email="alice@example.com",
             password_hash=get_password_hash("password123"),
-            full_name="Alice Smith",
+            full_name="Alice Sharma",
             role="CUSTOMER",
             created_at=datetime.now(timezone.utc),
         )
-        customer3 = User(
-            email="bob@example.com",
-            password_hash=get_password_hash("password123"),
-            full_name="Bob Wilson",
-            role="CUSTOMER",
-            created_at=datetime.now(timezone.utc),
-        )
-        db.add_all([admin, organiser, customer1, customer2, customer3])
+        db.add_all([admin, organiser, customer1, customer2])
         await db.flush()
 
-        print("Creating venues & seat layouts...")
-        # Venue 1: Grand Dolby Cinema
-        venue1 = Venue(
-            name="Grand Cinema Dolby Hall",
-            address="100 Market St, Financial District",
-            city="San Francisco",
-            total_rows=6,
-            total_cols=8,
-            created_at=datetime.now(timezone.utc),
-        )
-        # Venue 2: Metropolis Concert Arena
-        venue2 = Venue(
-            name="Metropolis Concert Arena",
-            address="450 7th Ave, Manhattan",
-            city="New York",
-            total_rows=8,
-            total_cols=10,
-            created_at=datetime.now(timezone.utc),
-        )
-        db.add_all([venue1, venue2])
-        await db.flush()
+        print("Creating 12 real Indian venues & auditoriums...")
+        venues_config = [
+            {"name": "PVR INOX IMAX Grand", "address": "Bandra Kurla Complex", "city": "Mumbai", "rows": 6, "cols": 8},
+            {"name": "Jio World Garden Arena", "address": "BKC Avenue", "city": "Mumbai", "rows": 8, "cols": 10},
+            {"name": "NCPA Tata Theatre", "address": "Nariman Point", "city": "Mumbai", "rows": 6, "cols": 8},
+            {"name": "PVR Director's Cut", "address": "Ambience Mall, Vasant Kunj", "city": "Delhi", "rows": 6, "cols": 8},
+            {"name": "Jawaharlal Nehru Stadium", "address": "Pragati Vihar", "city": "Delhi", "rows": 8, "cols": 10},
+            {"name": "PVR Forum IMAX", "address": "Koramangala", "city": "Bengaluru", "rows": 6, "cols": 8},
+            {"name": "Manpho Convention Grounds", "address": "Hebbal Outer Ring Rd", "city": "Bengaluru", "rows": 8, "cols": 10},
+            {"name": "Prasad's Large Screen Multiplex", "address": "NTR Gardens, Necklace Rd", "city": "Hyderabad", "rows": 6, "cols": 8},
+            {"name": "GMR Live Arena", "address": "Shamshabad", "city": "Hyderabad", "rows": 8, "cols": 10},
+            {"name": "INOX Phoenix Marketcity", "address": "Viman Nagar", "city": "Pune", "rows": 6, "cols": 8},
+            {"name": "Vagator Festival Grounds", "address": "Vagator Beach", "city": "Goa", "rows": 8, "cols": 10},
+            {"name": "Sathyam Cinemas IMAX", "address": "Royapettah", "city": "Chennai", "rows": 6, "cols": 8},
+            {"name": "South City INOX Luxe", "address": "Prince Anwar Shah Rd", "city": "Kolkata", "rows": 6, "cols": 8},
+            {"name": "Raj Mandir Heritage Cinema", "address": "Bhagwan Das Rd", "city": "Jaipur", "rows": 6, "cols": 8},
+            {"name": "Kochi Marine Drive Arena", "address": "Marine Drive", "city": "Kochi", "rows": 8, "cols": 10},
+            {"name": "Narendra Modi Arena Stadium", "address": "Motera", "city": "Ahmedabad", "rows": 8, "cols": 10},
+            {"name": "Elante INOX Luxe", "address": "Industrial Area Phase 1", "city": "Chandigarh", "rows": 6, "cols": 8},
+            {"name": "Lucknow Heritage Auditorium", "address": "Gomti Nagar", "city": "Lucknow", "rows": 6, "cols": 8},
+        ]
 
-        # Categories for Venue 1
-        v1_std = SeatCategory(venue_id=venue1.id, name="Standard", color_code="#3B82F6", tier_level=1)
-        v1_prem = SeatCategory(venue_id=venue1.id, name="Premium", color_code="#8B5CF6", tier_level=2)
-        v1_vip = SeatCategory(venue_id=venue1.id, name="VIP Recliner", color_code="#F59E0B", tier_level=3)
-        db.add_all([v1_std, v1_prem, v1_vip])
-
-        # Categories for Venue 2
-        v2_std = SeatCategory(venue_id=venue2.id, name="General Standard", color_code="#3B82F6", tier_level=1)
-        v2_prem = SeatCategory(venue_id=venue2.id, name="Premium Floor", color_code="#8B5CF6", tier_level=2)
-        v2_vip = SeatCategory(venue_id=venue2.id, name="VIP Front Stage", color_code="#F59E0B", tier_level=3)
-        db.add_all([v2_std, v2_prem, v2_vip])
-        await db.flush()
-
-        # Generate Seats for Venue 1 (6 rows x 8 cols = 48 seats)
-        # Rows A-B (VIP), C-D (Premium), E-F (Standard)
+        venues_map = {}
         alphabet = "ABCDEFGH"
-        v1_seats = []
-        for r in range(6):
-            row_char = alphabet[r]
-            cat = v1_vip if r < 2 else (v1_prem if r < 4 else v1_std)
-            for c in range(8):
-                v_seat = VenueSeat(
-                    venue_id=venue1.id,
-                    category_id=cat.id,
-                    row_label=row_char,
-                    seat_number=c + 1,
-                    grid_row=r,
-                    grid_col=c,
-                    is_active=True,
-                )
-                db.add(v_seat)
-                v1_seats.append(v_seat)
 
-        # Generate Seats for Venue 2 (8 rows x 10 cols = 80 seats)
-        v2_seats = []
-        for r in range(8):
-            row_char = alphabet[r]
-            cat = v2_vip if r < 2 else (v2_prem if r < 5 else v2_std)
-            for c in range(10):
-                v_seat = VenueSeat(
-                    venue_id=venue2.id,
-                    category_id=cat.id,
-                    row_label=row_char,
-                    seat_number=c + 1,
-                    grid_row=r,
-                    grid_col=c,
-                    is_active=True,
-                )
-                db.add(v_seat)
-                v2_seats.append(v_seat)
+        for vc in venues_config:
+            venue = Venue(
+                name=vc["name"],
+                address=vc["address"],
+                city=vc["city"],
+                total_rows=vc["rows"],
+                total_cols=vc["cols"],
+                created_at=datetime.now(timezone.utc),
+            )
+            db.add(venue)
+            await db.flush()
 
-        await db.flush()
+            # Categories
+            cat_std = SeatCategory(venue_id=venue.id, name="Standard", color_code="#3B82F6", tier_level=1)
+            cat_prem = SeatCategory(venue_id=venue.id, name="Premium", color_code="#8B5CF6", tier_level=2)
+            cat_vip = SeatCategory(venue_id=venue.id, name="VIP Recliner / Front Row", color_code="#F59E0B", tier_level=3)
+            db.add_all([cat_std, cat_prem, cat_vip])
+            await db.flush()
 
-        print("Creating events...")
-        event1 = Event(
-            organiser_id=organiser.id,
-            title="Interstellar: 10th Anniversary IMAX 70mm",
-            description="Christopher Nolan's masterpiece returns to the big screen in stunning 70mm IMAX. Journey through space and time to save human civilization.",
-            event_type="MOVIE",
-            banner_url="https://images.unsplash.com/photo-1534447677768-be436bb09401?w=800&auto=format&fit=crop&q=80",
-            duration_minutes=169,
-            created_at=datetime.now(timezone.utc),
-        )
-        event2 = Event(
-            organiser_id=organiser.id,
-            title="Coldplay: Music of the Spheres World Tour",
-            description="Experience Coldplay's spectacular stadium show featuring global hits, sustainable stage design, immersive LED wristbands, and special guests.",
-            event_type="CONCERT",
-            banner_url="https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=800&auto=format&fit=crop&q=80",
-            duration_minutes=150,
-            created_at=datetime.now(timezone.utc),
-        )
-        event3 = Event(
-            organiser_id=organiser.id,
-            title="Hans Zimmer Live Symphony Tour",
-            description="A breathtaking musical journey performing iconic scores from Gladiator, Inception, The Dark Knight, Dune, and The Lion King with a full orchestra.",
-            event_type="CONCERT",
-            banner_url="https://images.unsplash.com/photo-1465847899084-d164df4dedc6?w=800&auto=format&fit=crop&q=80",
-            duration_minutes=140,
-            created_at=datetime.now(timezone.utc),
-        )
-        db.add_all([event1, event2, event3])
-        await db.flush()
+            # Seats
+            seats = []
+            for r in range(vc["rows"]):
+                row_char = alphabet[r]
+                cat = cat_vip if r < 2 else (cat_prem if r < 4 else cat_std)
+                for c in range(vc["cols"]):
+                    v_seat = VenueSeat(
+                        venue_id=venue.id,
+                        category_id=cat.id,
+                        row_label=row_char,
+                        seat_number=c + 1,
+                        grid_row=r,
+                        grid_col=c,
+                        is_active=True,
+                    )
+                    db.add(v_seat)
+                    seats.append(v_seat)
 
-        print("Scheduling shows & generating per-show seat inventory...")
+            await db.flush()
+            venues_map[vc["name"]] = {
+                "venue": venue,
+                "categories": [cat_std, cat_prem, cat_vip],
+                "seats": seats,
+            }
+
+        print("Creating 28 rich Indian events across Movies, Concerts, Theatre & Sports...")
+        events_data = [
+            # 1. Movies (12 Movies)
+            {
+                "title": "Interstellar: 10th Anniversary IMAX 70mm",
+                "type": "MOVIE",
+                "city_venue": "PVR INOX IMAX Grand",
+                "duration": 169,
+                "banner": "https://images.unsplash.com/photo-1534447677768-be436bb09401?w=1200&auto=format&fit=crop&q=80",
+                "desc": "Christopher Nolan's masterpiece returns to the big screen in stunning 70mm IMAX. Journey through space and time to save human civilization.",
+                "prices": [399.0, 599.0, 899.0],
+            },
+            {
+                "title": "Inception: Ultimate Nolan 4K Experience",
+                "type": "MOVIE",
+                "city_venue": "PVR Director's Cut",
+                "duration": 148,
+                "banner": "https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=1200&auto=format&fit=crop&q=80",
+                "desc": "A thief who steals corporate secrets through the use of dream-sharing technology is given the inverse task of planting an idea into the mind of a C.E.O.",
+                "prices": [349.0, 499.0, 799.0],
+            },
+            {
+                "title": "Oppenheimer: The 70mm Screenings",
+                "type": "MOVIE",
+                "city_venue": "PVR INOX IMAX Grand",
+                "duration": 180,
+                "banner": "https://images.unsplash.com/photo-1440404653325-ab127d49abc1?w=1200&auto=format&fit=crop&q=80",
+                "desc": "The story of American scientist J. Robert Oppenheimer and his role in the development of the atomic bomb during World War II.",
+                "prices": [450.0, 650.0, 950.0],
+            },
+            {
+                "title": "Dune: Part Two (IMAX Special Edition)",
+                "type": "MOVIE",
+                "city_venue": "PVR Forum IMAX",
+                "duration": 166,
+                "banner": "https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=1200&auto=format&fit=crop&q=80",
+                "desc": "Paul Atreides unites with Chani and the Fremen while seeking revenge against the conspirators who destroyed his family.",
+                "prices": [399.0, 599.0, 899.0],
+            },
+            {
+                "title": "The Dark Knight: Trilogy Night",
+                "type": "MOVIE",
+                "city_venue": "Prasad's Large Screen Multiplex",
+                "duration": 152,
+                "banner": "https://images.unsplash.com/photo-1478760329108-5c3ed9d495a0?w=1200&auto=format&fit=crop&q=80",
+                "desc": "When the menace known as the Joker wreaks havoc and chaos on the people of Gotham, Batman must accept one of the greatest psychological tests of his ability to fight injustice.",
+                "prices": [299.0, 449.0, 699.0],
+            },
+            {
+                "title": "Avatar: The Way of Water 3D HFR",
+                "type": "MOVIE",
+                "city_venue": "Sathyam Cinemas IMAX",
+                "duration": 192,
+                "banner": "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=1200&auto=format&fit=crop&q=80",
+                "desc": "Jake Sully lives with his newfound family formed on the extrasolar moon Pandora. Once a familiar threat returns to finish what was previously started, Jake must work with Neytiri and the army of the Na'vi race.",
+                "prices": [349.0, 499.0, 750.0],
+            },
+            {
+                "title": "Whiplash: 10th Anniversary Director's Cut",
+                "type": "MOVIE",
+                "city_venue": "INOX Phoenix Marketcity",
+                "duration": 107,
+                "banner": "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=1200&auto=format&fit=crop&q=80",
+                "desc": "A promising young drummer enrolls at a cut-throat music conservatory where his dreams of greatness are mentored by an instructor who will stop at nothing to realize a student's potential.",
+                "prices": [249.0, 399.0, 599.0],
+            },
+            {
+                "title": "The Grand Budapest Hotel: Curated Screening",
+                "type": "MOVIE",
+                "city_venue": "South City INOX Luxe",
+                "duration": 99,
+                "banner": "https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?w=1200&auto=format&fit=crop&q=80",
+                "desc": "A writer encounters the owner of an aging high-class hotel, who tells him of his early years serving as a lobby boy in the hotel's glorious years under an exceptional concierge.",
+                "prices": [249.0, 399.0, 599.0],
+            },
+            {
+                "title": "Spirited Away: Studio Ghibli Festival",
+                "type": "MOVIE",
+                "city_venue": "Raj Mandir Heritage Cinema",
+                "duration": 125,
+                "banner": "https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=1200&auto=format&fit=crop&q=80",
+                "desc": "During her family's move to the suburbs, a sullen 10-year-old girl wanders into a world ruled by gods, witches, and spirits, and where humans are changed into beasts.",
+                "prices": [249.0, 349.0, 499.0],
+            },
+            {
+                "title": "The Shawshank Redemption: Remastered 4K",
+                "type": "MOVIE",
+                "city_venue": "Kochi Marine Drive Arena",
+                "duration": 142,
+                "banner": "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=1200&auto=format&fit=crop&q=80",
+                "desc": "A banker convicted of uxoricide forms a friendship over a quarter of a century with a hardened convict, while maintaining his innocence and trying to remain hopeful through simple compassion.",
+                "prices": [199.0, 299.0, 499.0],
+            },
+            {
+                "title": "Blade Runner 2049: Cyberpunk IMAX Night",
+                "type": "MOVIE",
+                "city_venue": "Narendra Modi Arena Stadium",
+                "duration": 164,
+                "banner": "https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=1200&auto=format&fit=crop&q=80",
+                "desc": "Young Blade Runner K's discovery of a long-buried secret leads him to track down former Blade Runner Rick Deckard, who's been missing for thirty years.",
+                "prices": [299.0, 499.0, 799.0],
+            },
+            {
+                "title": "Spider-Man: Across the Spider-Verse Live in Concert",
+                "type": "MOVIE",
+                "city_venue": "PVR INOX IMAX Grand",
+                "duration": 140,
+                "banner": "https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=1200&auto=format&fit=crop&q=80",
+                "desc": "Miles Morales catapults across the Multiverse, where he encounters a team of Spider-People charged with protecting its very existence.",
+                "prices": [399.0, 599.0, 899.0],
+            },
+
+            # 2. Concerts (10 Concerts)
+            {
+                "title": "Arijit Singh Live: India Arena Tour",
+                "type": "CONCERT",
+                "city_venue": "Jio World Garden Arena",
+                "duration": 180,
+                "banner": "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=1200&auto=format&fit=crop&q=80",
+                "desc": "India's undisputed voice of emotion performs his biggest romantic anthems and soul-stirring melodies with a 50-piece grand symphony orchestra.",
+                "prices": [999.0, 1999.0, 3999.0],
+            },
+            {
+                "title": "Coldplay: Music of the Spheres India Tour",
+                "type": "CONCERT",
+                "city_venue": "Narendra Modi Arena Stadium",
+                "duration": 150,
+                "banner": "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=1200&auto=format&fit=crop&q=80",
+                "desc": "Experience Coldplay's spectacular stadium show featuring global hits, sustainable stage design, immersive LED wristbands, and special guests.",
+                "prices": [1499.0, 2999.0, 6499.0],
+            },
+            {
+                "title": "Hans Zimmer Live: World of Symphonic Cinema",
+                "type": "CONCERT",
+                "city_venue": "Manpho Convention Grounds",
+                "duration": 140,
+                "banner": "https://images.unsplash.com/photo-1465847899084-d164df4dedc6?w=1200&auto=format&fit=crop&q=80",
+                "desc": "A breathtaking musical journey performing iconic scores from Gladiator, Inception, The Dark Knight, Dune, and The Lion King with a full orchestra.",
+                "prices": [1299.0, 2499.0, 4999.0],
+            },
+            {
+                "title": "Sunburn Festival Goa 2026",
+                "type": "CONCERT",
+                "city_venue": "Vagator Festival Grounds",
+                "duration": 360,
+                "banner": "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=1200&auto=format&fit=crop&q=80",
+                "desc": "Asia's premier electronic music festival returns to Vagator Beach featuring 4 massive stages, world-class DJs, fire pyrotechnics, and coastal sunset vibes.",
+                "prices": [1999.0, 3499.0, 7999.0],
+            },
+            {
+                "title": "Bacardi NH7 Weekender: Multi-Genre Festival",
+                "type": "CONCERT",
+                "city_venue": "INOX Phoenix Marketcity",
+                "duration": 300,
+                "banner": "https://images.unsplash.com/photo-1429962714451-bb934ecdc4ec?w=1200&auto=format&fit=crop&q=80",
+                "desc": "The happiest music festival featuring indie singer-songwriters, rock legends, hip-hop collectives, and immersive art installations.",
+                "prices": [1499.0, 2499.0, 4499.0],
+            },
+            {
+                "title": "Prateek Kuhad: Silhouettes India Tour",
+                "type": "CONCERT",
+                "city_venue": "Jawaharlal Nehru Stadium",
+                "duration": 120,
+                "banner": "https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=1200&auto=format&fit=crop&q=80",
+                "desc": "An intimate evening with Prateek Kuhad performing poetic acoustic hits like 'Cold/mess', 'Kasoor', and brand-new songs under open skies.",
+                "prices": [799.0, 1499.0, 2499.0],
+            },
+            {
+                "title": "Diljit Dosanjh: Dil-Luminati India Tour",
+                "type": "CONCERT",
+                "city_venue": "Elante INOX Luxe",
+                "duration": 150,
+                "banner": "https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?w=1200&auto=format&fit=crop&q=80",
+                "desc": "High-octane Punjabi energy, iconic beats, and unmatched charisma. Join Diljit Dosanjh in an electrifying live concert.",
+                "prices": [1299.0, 2499.0, 5999.0],
+            },
+            {
+                "title": "Sufi & Qawwali Night with Rahat Fateh Ali Khan",
+                "type": "CONCERT",
+                "city_venue": "Lucknow Heritage Auditorium",
+                "duration": 180,
+                "banner": "https://images.unsplash.com/photo-1511192336575-5a79af67a629?w=1200&auto=format&fit=crop&q=80",
+                "desc": "Immerse your spirit in transcendent Sufi melodies, classical harmonies, and timeless Qawwalis in the historic heart of Lucknow.",
+                "prices": [699.0, 1299.0, 2999.0],
+            },
+            {
+                "title": "Anuv Jain: Guldasta Acoustic Tour",
+                "type": "CONCERT",
+                "city_venue": "Raj Mandir Heritage Cinema",
+                "duration": 120,
+                "banner": "https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=1200&auto=format&fit=crop&q=80",
+                "desc": "Sing along to 'Baarishein', 'Alag Aasmaan', and 'Husn' with Anuv Jain in a warm acoustic candlelit setting.",
+                "prices": [599.0, 999.0, 1899.0],
+            },
+            {
+                "title": "EDM Arena with Martin Garrix & Friends",
+                "type": "CONCERT",
+                "city_venue": "GMR Live Arena",
+                "duration": 240,
+                "banner": "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=1200&auto=format&fit=crop&q=80",
+                "desc": "World No. 1 DJ Martin Garrix brings progressive house bangers, state-of-the-art laser arrays, and relentless festival energy to Hyderabad.",
+                "prices": [1499.0, 2499.0, 4999.0],
+            },
+
+            # 3. Theatre & Performing Arts (3 Shows)
+            {
+                "title": "Mughal-e-Azam: The Grand Broadway-Style Musical",
+                "type": "THEATRE",
+                "city_venue": "NCPA Tata Theatre",
+                "duration": 150,
+                "banner": "https://images.unsplash.com/photo-1507676184212-d03ab07a01bf?w=1200&auto=format&fit=crop&q=80",
+                "desc": "Directed by Feroz Abbas Khan with Manish Malhotra costumes and live Kathak dancers performing the immortal saga of Salim and Anarkali.",
+                "prices": [750.0, 1500.0, 3500.0],
+            },
+            {
+                "title": "The Phantom of the Opera: West End Premiere",
+                "type": "THEATRE",
+                "city_venue": "NCPA Tata Theatre",
+                "duration": 160,
+                "banner": "https://images.unsplash.com/photo-1460723237483-7a6dc9d0b212?w=1200&auto=format&fit=crop&q=80",
+                "desc": "Andrew Lloyd Webber's timeless masterpiece featuring the iconic falling chandelier, lavish sets, and hauntingly beautiful vocal performances.",
+                "prices": [999.0, 1999.0, 4500.0],
+            },
+            {
+                "title": "Zakir Khan Live: Tathastu & New Specials",
+                "type": "THEATRE",
+                "city_venue": "South City INOX Luxe",
+                "duration": 90,
+                "banner": "https://images.unsplash.com/photo-1585699324551-f6c309eedeca?w=1200&auto=format&fit=crop&q=80",
+                "desc": "The 'Sakht Launda' returns with his signature heartwarming humor, relatable storytelling, and sharp comedic observations.",
+                "prices": [499.0, 899.0, 1499.0],
+            },
+
+            # 4. Sports & Live Stadiums (3 Events)
+            {
+                "title": "T20 Championship Grand Final: India vs Australia",
+                "type": "SPORTS",
+                "city_venue": "Narendra Modi Arena Stadium",
+                "duration": 220,
+                "banner": "https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?w=1200&auto=format&fit=crop&q=80",
+                "desc": "The biggest cricket clash of the year! 100,000 roaring fans witnessing high-intensity sixes, yorkers, and trophy glory under stadium floodlights.",
+                "prices": [799.0, 1999.0, 4999.0],
+            },
+            {
+                "title": "Indian Super League Championship Final",
+                "type": "SPORTS",
+                "city_venue": "Kochi Marine Drive Arena",
+                "duration": 120,
+                "banner": "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=1200&auto=format&fit=crop&q=80",
+                "desc": "Electric football fever! Watch India's top football clubs battle for the prestigious championship trophy.",
+                "prices": [299.0, 699.0, 1499.0],
+            },
+            {
+                "title": "Pro Kabaddi League: All-Stars Mega Clash",
+                "type": "SPORTS",
+                "city_venue": "Sathyam Cinemas IMAX",
+                "duration": 90,
+                "banner": "https://images.unsplash.com/photo-1517649763962-0c623266ddc0?w=1200&auto=format&fit=crop&q=80",
+                "desc": "Fast-paced raids, bone-crushing tackles, and pure athletic intensity in this high-stakes league clash.",
+                "prices": [249.0, 499.0, 999.0],
+            },
+        ]
+
         now = datetime.now(timezone.utc)
-        
-        # Show 1: Interstellar tonight
-        show1 = Show(
-            event_id=event1.id,
-            venue_id=venue1.id,
-            start_time=now + timedelta(days=1, hours=4),
-            end_time=now + timedelta(days=1, hours=7),
-            status="SCHEDULED",
-            created_at=now,
-        )
-        # Show 2: Interstellar tomorrow afternoon
-        show2 = Show(
-            event_id=event1.id,
-            venue_id=venue1.id,
-            start_time=now + timedelta(days=2, hours=2),
-            end_time=now + timedelta(days=2, hours=5),
-            status="SCHEDULED",
-            created_at=now,
-        )
-        # Show 3: Coldplay at Metropolis Arena
-        show3 = Show(
-            event_id=event2.id,
-            venue_id=venue2.id,
-            start_time=now + timedelta(days=3, hours=5),
-            end_time=now + timedelta(days=3, hours=8),
-            status="SCHEDULED",
-            created_at=now,
-        )
-        # Show 4: Hans Zimmer Symphony
-        show4 = Show(
-            event_id=event3.id,
-            venue_id=venue2.id,
-            start_time=now + timedelta(days=5, hours=4),
-            end_time=now + timedelta(days=5, hours=7),
-            status="SCHEDULED",
-            created_at=now,
-        )
-        db.add_all([show1, show2, show3, show4])
-        await db.flush()
 
-        # Pricing for Show 1 & 2 (Dolby Cinema)
-        for s in [show1, show2]:
-            db.add_all([
-                ShowPricing(show_id=s.id, category_id=v1_std.id, price=18.50),
-                ShowPricing(show_id=s.id, category_id=v1_prem.id, price=26.00),
-                ShowPricing(show_id=s.id, category_id=v1_vip.id, price=38.00),
-            ])
-            for vs in v1_seats:
-                db.add(ShowSeat(show_id=s.id, venue_seat_id=vs.id, status="AVAILABLE", version=1))
+        for i, ed in enumerate(events_data):
+            event = Event(
+                organiser_id=organiser.id,
+                title=ed["title"],
+                description=ed["desc"],
+                event_type=ed["type"],
+                banner_url=ed["banner"],
+                duration_minutes=ed["duration"],
+                created_at=now - timedelta(days=i * 2),
+            )
+            db.add(event)
+            await db.flush()
 
-        # Pricing for Show 3 & 4 (Metropolis Arena)
-        for s in [show3, show4]:
-            db.add_all([
-                ShowPricing(show_id=s.id, category_id=v2_std.id, price=65.00),
-                ShowPricing(show_id=s.id, category_id=v2_prem.id, price=120.00),
-                ShowPricing(show_id=s.id, category_id=v2_vip.id, price=250.00),
-            ])
-            for vs in v2_seats:
-                db.add(ShowSeat(show_id=s.id, venue_seat_id=vs.id, status="AVAILABLE", version=1))
+            venue_info = venues_map.get(ed["city_venue"]) or list(venues_map.values())[0]
+            venue_obj = venue_info["venue"]
+            cats = venue_info["categories"]
+            seats = venue_info["seats"]
+
+            # Schedule 2 upcoming showtimes for each event (e.g. today, tomorrow, next week)
+            for s_idx in range(2):
+                show_start = now + timedelta(days=1 + (i % 7) + (s_idx * 3), hours=14 + (s_idx * 4))
+                show = Show(
+                    event_id=event.id,
+                    venue_id=venue_obj.id,
+                    start_time=show_start,
+                    end_time=show_start + timedelta(minutes=ed["duration"]),
+                    status="SCHEDULED",
+                    created_at=now,
+                )
+                db.add(show)
+                await db.flush()
+
+                # Pricing
+                for cat_idx, cat in enumerate(cats):
+                    price_val = ed["prices"][min(cat_idx, len(ed["prices"]) - 1)]
+                    db.add(ShowPricing(show_id=show.id, category_id=cat.id, price=price_val))
+
+                # Inventory
+                # For event index 3 (Dune) & 15 (Sunburn) make show 1 sold out or few seats left for demo realism
+                is_sold_out_demo = (i == 15 and s_idx == 0)
+                is_few_seats_demo = (i == 3 and s_idx == 0)
+
+                for s_num, vs in enumerate(seats):
+                    seat_status = "AVAILABLE"
+                    if is_sold_out_demo:
+                        seat_status = "BOOKED"
+                    elif is_few_seats_demo and s_num > 5:
+                        seat_status = "BOOKED"
+
+                    db.add(ShowSeat(show_id=show.id, venue_seat_id=vs.id, status=seat_status, version=1))
 
         await db.commit()
-        print("Database successfully seeded with demo accounts, venues, and shows!")
+        print("Database successfully seeded with 28 India-wide events across Movies, Concerts, Theatre, and Sports!")
 
 
 if __name__ == "__main__":

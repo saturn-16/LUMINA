@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import api from '../services/api';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
-import { Search, MapPin, ArrowUpRight, Film, Music, Sparkles, X } from 'lucide-react';
+import { Search, MapPin, ArrowUpRight, Film, Music, Sparkles, X, ChevronDown, Ticket, Drama, Trophy, Flame } from 'lucide-react';
 
 export default function Home() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -17,6 +17,7 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState(initialQuery);
   const [selectedType, setSelectedType] = useState(initialType);
   const [selectedCity, setSelectedCity] = useState(initialCity);
+  const [visibleCount, setVisibleCount] = useState(8);
 
   const indianCities = [
     'All Cities',
@@ -24,12 +25,15 @@ export default function Home() {
     'Delhi',
     'Bengaluru',
     'Hyderabad',
-    'Pune',
     'Chennai',
     'Kolkata',
+    'Pune',
     'Ahmedabad',
     'Jaipur',
     'Goa',
+    'Kochi',
+    'Chandigarh',
+    'Lucknow',
   ];
 
   // Sync state with URL search params
@@ -37,6 +41,7 @@ export default function Home() {
     setSelectedType(searchParams.get('type') || 'ALL');
     setSearchQuery(searchParams.get('query') || '');
     setSelectedCity(searchParams.get('city') || '');
+    setVisibleCount(8);
   }, [searchParams]);
 
   // Fetch events on query/type/city change
@@ -67,6 +72,7 @@ export default function Home() {
 
   const handleTypeChange = (type) => {
     setSelectedType(type);
+    setVisibleCount(8);
     const newParams = new URLSearchParams(searchParams);
     if (type === 'ALL') {
       newParams.delete('type');
@@ -79,6 +85,7 @@ export default function Home() {
   const handleCityChange = (city) => {
     const cityName = city === 'All Cities' ? '' : city;
     setSelectedCity(cityName);
+    setVisibleCount(8);
     const newParams = new URLSearchParams(searchParams);
     if (!cityName) {
       newParams.delete('city');
@@ -95,17 +102,29 @@ export default function Home() {
     setSearchParams(newParams);
   };
 
+  const handleLoadMore = () => {
+    setVisibleCount((prev) => prev + 8);
+  };
+
   const featuredEvent = events.length > 0 ? events[0] : null;
   const remainingEvents = events.length > 1 ? events.slice(1) : [];
+  const displayedEvents = remainingEvents.slice(0, visibleCount);
+  const hasMore = remainingEvents.length > visibleCount;
+
+  // Format currency into INR ₹
+  const formatPrice = (val) => {
+    if (!val && val !== 0) return 'Pricing TBA';
+    return `₹${Math.round(val).toLocaleString('en-IN')}`;
+  };
 
   return (
     <div className="relative min-h-screen bg-[#050505] text-white font-sans selection:bg-white/20 selection:text-white pb-24 overflow-x-hidden">
-      {/* Subtle Atmospheric Gradient Overlay (No Starfield) */}
+      {/* Subtle Atmospheric Gradient Overlay */}
       <div
         className="fixed inset-0 pointer-events-none z-0"
         style={{
           background:
-            'radial-gradient(ellipse at 50% 0%, rgba(30, 30, 40, 0.4) 0%, rgba(5, 5, 5, 0.8) 60%, #000000 100%)',
+            'radial-gradient(ellipse at 50% 0%, rgba(30, 30, 45, 0.35) 0%, rgba(5, 5, 5, 0.8) 60%, #000000 100%)',
         }}
       />
 
@@ -142,7 +161,7 @@ export default function Home() {
               </h1>
 
               <p className="text-sm sm:text-base text-white/60 max-w-lg mt-5 leading-relaxed font-normal">
-                Movies, concerts and experiences worth leaving home for. Reserve your seats with instant holds and live availability.
+                Movies, concerts, theatre and live arena sports across 15+ Indian cities. Reserve your seats with instant holds and live availability.
               </p>
             </div>
 
@@ -193,6 +212,8 @@ export default function Home() {
               { label: 'ALL EVENTS', value: 'ALL' },
               { label: 'MOVIES', value: 'MOVIE' },
               { label: 'CONCERTS', value: 'CONCERT' },
+              { label: 'THEATRE', value: 'THEATRE' },
+              { label: 'SPORTS', value: 'SPORTS' },
             ].map((tab) => {
               const isActive = selectedType === tab.value;
               return (
@@ -215,7 +236,7 @@ export default function Home() {
         {/* Loading State */}
         {loading ? (
           <div className="space-y-8 animate-pulse">
-            <div className="h-[420px] rounded-3xl liquid-glass border border-white/10" />
+            <div className="h-[440px] rounded-3xl liquid-glass border border-white/10" />
             <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
               <div className="md:col-span-7 h-96 rounded-3xl liquid-glass border border-white/10" />
               <div className="md:col-span-5 h-96 rounded-3xl liquid-glass border border-white/10" />
@@ -228,8 +249,8 @@ export default function Home() {
             <h3 className="text-xl font-normal text-white mb-2">No experiences found</h3>
             <p className="text-xs sm:text-sm text-white/50 max-w-sm mx-auto mb-6">
               {searchQuery || selectedCity
-                ? `No results matching your filters. Try clearing your search or picking another city.`
-                : `Check back soon for new movie releases and concert tours across India.`}
+                ? `No events found matching "${searchQuery || selectedCity}". Try resetting your filters.`
+                : `No events in this category yet. Check back soon for upcoming showtimes.`}
             </p>
             <button
               onClick={() => {
@@ -244,7 +265,7 @@ export default function Home() {
             </button>
           </div>
         ) : (
-          <div className="space-y-12">
+          <div className="space-y-14">
             {/* =========================================================================
                 1. FEATURED CINEMATIC SPOTLIGHT EVENT CARD (Dynamic First Event)
                ========================================================================= */}
@@ -265,7 +286,7 @@ export default function Home() {
                       className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700 ease-out"
                     />
 
-                    {/* Dark Multi-Stop Gradient for Maximum Readability */}
+                    {/* Dark Multi-Stop Gradient */}
                     <div className="absolute inset-0 bg-gradient-to-t from-black via-black/55 to-black/10" />
                     <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/30 to-transparent" />
 
@@ -277,6 +298,12 @@ export default function Home() {
                       <span className="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest bg-black/60 text-white/80 backdrop-blur-md border border-white/10">
                         Featured Premiere
                       </span>
+                      {featuredEvent.city && (
+                        <span className="hidden sm:inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-medium text-white/70 bg-black/40 backdrop-blur-md border border-white/10">
+                          <MapPin className="w-3 h-3 text-white/50" />
+                          {featuredEvent.city}
+                        </span>
+                      )}
                     </div>
 
                     {/* Duration / Meta Top Right */}
@@ -302,16 +329,16 @@ export default function Home() {
                           <div>
                             <div className="text-[10px] uppercase tracking-widest text-white/50">Tickets from</div>
                             <div className="text-lg sm:text-xl font-bold text-white">
-                              {featuredEvent.min_price ? `$${featuredEvent.min_price.toFixed(2)}` : 'Pricing TBA'}
+                              {formatPrice(featuredEvent.min_price)}
                             </div>
                           </div>
 
                           <div className="h-7 w-px bg-white/15 hidden sm:block" />
 
                           <div className="hidden sm:block">
-                            <div className="text-[10px] uppercase tracking-widest text-white/50">Experiences</div>
+                            <div className="text-[10px] uppercase tracking-widest text-white/50">Venue</div>
                             <div className="text-xs font-medium text-white/80">
-                              {featuredEvent.shows?.length ? `${featuredEvent.shows.length} Showtimes` : 'Reserve Online'}
+                              {featuredEvent.venue_name || 'Premier Auditorium'}
                             </div>
                           </div>
                         </div>
@@ -331,25 +358,43 @@ export default function Home() {
             {/* =========================================================================
                 2. ASYMMETRIC EDITORIAL GRID (Trending This Week)
                ========================================================================= */}
-            {remainingEvents.length > 0 && (
-              <section className="pt-4">
+            {displayedEvents.length > 0 && (
+              <section className="pt-2">
                 <div className="flex items-center justify-between mb-8">
                   <div>
-                    <h2 className="text-2xl sm:text-3xl font-normal tracking-tight text-white">
+                    <h2 className="text-2xl sm:text-3xl font-normal tracking-tight text-white flex items-center gap-2.5">
+                      <Flame className="w-6 h-6 text-amber-400" />
                       Trending <span className="italic text-white/70">this week</span>
                     </h2>
                   </div>
                   <span className="text-xs uppercase tracking-widest text-white/40 font-mono">
-                    {remainingEvents.length} Experiences
+                    Showing {displayedEvents.length + 1} of {events.length}
                   </span>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-8">
-                  {remainingEvents.map((evt, idx) => {
-                    // Asymmetric column span pattern (7 vs 5, 5 vs 7)
-                    const isWide = idx % 4 === 0 || idx % 4 === 3;
-                    const colSpanClass = isWide ? 'md:col-span-7' : 'md:col-span-5';
-                    const heightClass = isWide ? 'h-[360px] sm:h-[420px]' : 'h-[380px] sm:h-[440px]';
+                  {displayedEvents.map((evt, idx) => {
+                    // Asymmetric column span pattern: 7 vs 5, 5 vs 7, 4 vs 4 vs 4
+                    const pattern = idx % 6;
+                    let colSpanClass = 'md:col-span-6';
+                    let heightClass = 'h-[380px] sm:h-[430px]';
+
+                    if (pattern === 0) {
+                      colSpanClass = 'md:col-span-7';
+                      heightClass = 'h-[360px] sm:h-[420px]';
+                    } else if (pattern === 1) {
+                      colSpanClass = 'md:col-span-5';
+                      heightClass = 'h-[380px] sm:h-[440px]';
+                    } else if (pattern === 2) {
+                      colSpanClass = 'md:col-span-5';
+                      heightClass = 'h-[380px] sm:h-[440px]';
+                    } else if (pattern === 3) {
+                      colSpanClass = 'md:col-span-7';
+                      heightClass = 'h-[360px] sm:h-[420px]';
+                    } else if (pattern === 4 || pattern === 5) {
+                      colSpanClass = 'md:col-span-6';
+                      heightClass = 'h-[360px] sm:h-[400px]';
+                    }
 
                     return (
                       <Link
@@ -371,11 +416,17 @@ export default function Home() {
                           {/* Dark Vignette Overlay */}
                           <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-black/10" />
 
-                          {/* Category Tag */}
-                          <div className="absolute top-5 left-5">
+                          {/* Top Badges */}
+                          <div className="absolute top-5 left-5 flex items-center gap-1.5">
                             <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest bg-white/20 text-white backdrop-blur-md border border-white/20">
                               {evt.event_type}
                             </span>
+                            {evt.city && (
+                              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-medium text-white/80 bg-black/60 backdrop-blur-md border border-white/10 flex items-center gap-1">
+                                <MapPin className="w-2.5 h-2.5 text-white/50" />
+                                {evt.city}
+                              </span>
+                            )}
                           </div>
 
                           {/* Duration Tag */}
@@ -399,7 +450,7 @@ export default function Home() {
                               <div>
                                 <div className="text-[10px] uppercase tracking-widest text-white/40">Tickets from</div>
                                 <div className="text-base font-bold text-white">
-                                  {evt.min_price ? `$${evt.min_price.toFixed(2)}` : 'Pricing TBA'}
+                                  {formatPrice(evt.min_price)}
                                 </div>
                               </div>
 
@@ -414,6 +465,18 @@ export default function Home() {
                     );
                   })}
                 </div>
+
+                {/* Load More Button */}
+                {hasMore && (
+                  <div className="mt-12 text-center">
+                    <button
+                      onClick={handleLoadMore}
+                      className="px-8 py-3 rounded-full liquid-glass border border-white/20 hover:bg-white/10 text-white font-semibold text-xs uppercase tracking-widest transition-all cursor-pointer shadow-lg hover:scale-[1.02]"
+                    >
+                      Load More Experiences ({remainingEvents.length - visibleCount} remaining) ↓
+                    </button>
+                  </div>
+                )}
               </section>
             )}
           </div>

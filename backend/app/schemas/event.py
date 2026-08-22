@@ -7,7 +7,7 @@ from backend.app.schemas.auth import UserResponse
 class EventBase(BaseModel):
     title: str = Field(..., min_length=2, max_length=255)
     description: Optional[str] = None
-    event_type: str = Field(..., pattern="^(MOVIE|CONCERT)$")
+    event_type: str = Field(..., pattern="^(MOVIE|CONCERT|THEATRE|SPORTS|FESTIVAL)$")
     banner_url: Optional[str] = None
     duration_minutes: int = Field(120, ge=1)
 
@@ -34,3 +34,8 @@ class EventResponse(EventBase):
     min_price: Optional[float] = None
     max_price: Optional[float] = None
     total_shows: Optional[int] = 0
+    city: Optional[str] = None
+    venue_name: Optional[str] = None
+    next_show_time: Optional[datetime] = None
+    available_seats: Optional[int] = None
+    is_sold_out: Optional[bool] = False
