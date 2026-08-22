@@ -3,28 +3,29 @@ import { Link } from 'react-router-dom';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import TicketCard from '../components/TicketCard';
-import HoldTimer from '../components/HoldTimer';
-import { Ticket, Clock, CheckCircle, AlertCircle, Sparkles, ArrowRight, XCircle } from 'lucide-react';
+import Navbar from '../components/Navbar';
+import GalaxyBackground from '../components/GalaxyBackground';
+import { Ticket, Clock, XCircle, AlertCircle, Sparkles, CheckCircle, RefreshCw, ArrowRight, UserCheck } from 'lucide-react';
 
 export default function CustomerDashboard() {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState('tickets'); // 'tickets' | 'waitlist'
   const [bookings, setBookings] = useState([]);
-  const [waitlistEntries, setWaitlistEntries] = useState([]);
+  const [waitlists, setWaitlists] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [actionMessage, setActionMessage] = useState(null);
+  const [cancellingId, setCancellingId] = useState(null);
+  const [message, setMessage] = useState(null);
 
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
-      const [bookingsRes, waitlistRes] = await Promise.all([
-        api.get('/bookings'),
+      const [bookingsRes, waitlistsRes] = await Promise.all([
+        api.get('/bookings/my'),
         api.get('/waitlist'),
       ]);
       setBookings(bookingsRes.data);
-      setWaitlistEntries(waitlistRes.data);
+      setWaitlists(waitlistsRes.data);
     } catch (err) {
-      console.error('Failed to load dashboard', err);
+      console.error('Failed to load dashboard data', err);
     } finally {
       setLoading(false);
     }
@@ -35,217 +36,192 @@ export default function CustomerDashboard() {
   }, []);
 
   const handleCancelBooking = async (bookingId) => {
+    if (!window.confirm('Are you sure you want to cancel this booking? Released seats will be automatically reallocated to the waitlist queue.')) {
+      return;
+    }
+
+    setCancellingId(bookingId);
     try {
       const res = await api.post(`/bookings/${bookingId}/cancel`);
-      setActionMessage({
-        type: 'success',
-        text: 'Booking cancelled. Your released seats were automatically offered to the waitlist queue!',
-      });
+      setMessage({ type: 'success', text: res.data.message });
       fetchDashboardData();
     } catch (err) {
-      setActionMessage({
-        type: 'error',
-        text: err.response?.data?.detail || 'Failed to cancel booking.',
-      });
+      setMessage({ type: 'error', text: err.response?.data?.detail || 'Failed to cancel booking.' });
+    } finally {
+      setCancellingId(null);
     }
   };
 
-  const activeOffersCount = waitlistEntries.filter((e) => e.active_offer).length;
-
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-      {/* Dashboard Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-        <div>
-          <span className="text-xs font-bold text-blue-400 uppercase tracking-wider">Customer Portal</span>
-          <h1 className="text-2xl sm:text-3xl font-black text-white mt-0.5">
-            Welcome back, {user?.full_name}
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-400 mt-1">
-            Manage your movie & concert tickets, view QR codes, and monitor waitlist offers.
-          </p>
-        </div>
+    <div className="relative min-h-screen text-slate-100 pb-24 overflow-x-hidden">
+      {/* Galaxy Background */}
+      <GalaxyBackground />
 
-        <Link
-          to="/"
-          className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-lg shadow-blue-600/30 transition-all text-center"
-        >
-          + Explore Shows
-        </Link>
+      {/* Header Bar */}
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <Navbar />
       </div>
 
-      {actionMessage && (
-        <div className={`p-4 rounded-2xl mb-8 flex items-center justify-between gap-3 text-sm shadow-xl ${
-          actionMessage.type === 'success'
-            ? 'bg-emerald-950/80 border border-emerald-800 text-emerald-300'
-            : 'bg-red-950/80 border border-red-800 text-red-300'
-        }`}>
-          <div className="flex items-center gap-2.5">
-            {actionMessage.type === 'success' ? (
-              <CheckCircle className="w-5 h-5 text-emerald-400 shrink-0" />
-            ) : (
-              <AlertCircle className="w-5 h-5 text-red-400 shrink-0" />
-            )}
-            <span>{actionMessage.text}</span>
+      <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
+        {/* Welcome Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+          <div>
+            <span className="text-xs uppercase tracking-widest text-blue-400 font-bold">Customer Portal</span>
+            <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight mt-0.5">
+              Welcome back, {user?.full_name || 'Guest'}
+            </h1>
           </div>
-          <button onClick={() => setActionMessage(null)} className="text-xs opacity-60 hover:opacity-100">
-            Dismiss
+
+          <button
+            onClick={fetchDashboardData}
+            className="px-4 py-2 rounded-xl liquid-glass border border-white/10 hover:bg-white/10 text-xs font-semibold text-slate-300 transition-all flex items-center gap-1.5 self-start cursor-pointer"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            Refresh
           </button>
         </div>
-      )}
 
-      {/* Tabs */}
-      <div className="flex items-center gap-3 border-b border-slate-800 pb-4 mb-8">
-        <button
-          onClick={() => setActiveTab('tickets')}
-          className={`px-4 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${
-            activeTab === 'tickets'
-              ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
-              : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
-          }`}
-        >
-          <Ticket className="w-4 h-4" />
-          My Tickets ({bookings.filter(b => b.status === 'CONFIRMED').length})
-        </button>
+        {message && (
+          <div className={`mb-8 p-4 rounded-2xl border text-sm flex items-center gap-3 shadow-xl backdrop-blur-xl ${
+            message.type === 'success'
+              ? 'bg-emerald-950/80 border-emerald-800 text-emerald-300'
+              : 'bg-red-950/80 border-red-800 text-red-300'
+          }`}>
+            {message.type === 'success' ? <CheckCircle className="w-5 h-5 shrink-0" /> : <AlertCircle className="w-5 h-5 shrink-0" />}
+            <span>{message.text}</span>
+          </div>
+        )}
 
-        <button
-          onClick={() => setActiveTab('waitlist')}
-          className={`px-4 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-2 relative ${
-            activeTab === 'waitlist'
-              ? 'bg-purple-600 text-white shadow-lg shadow-purple-600/30'
-              : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
-          }`}
-        >
-          <Clock className="w-4 h-4" />
-          Waitlist & Offers ({waitlistEntries.length})
-          {activeOffersCount > 0 && (
-            <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping absolute -top-1 -right-1"></span>
-          )}
-        </button>
-      </div>
+        {/* Section 1: Active Waitlist Entries & Time-Limited Offers */}
+        {waitlists.length > 0 && (
+          <div className="mb-12">
+            <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+              <Clock className="w-5 h-5 text-purple-400" />
+              Active Waitlists & Instant Queue Reallocations
+            </h2>
 
-      {loading ? (
-        <div className="py-20 text-center">
-          <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
-        </div>
-      ) : activeTab === 'tickets' ? (
-        /* My Tickets Tab */
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {waitlists.map((wl) => (
+                <div
+                  key={wl.id}
+                  className={`p-6 rounded-3xl border shadow-xl backdrop-blur-xl transition-all ${
+                    wl.status === 'OFFERED'
+                      ? 'liquid-glass border-amber-500/80 ring-2 ring-amber-500/30'
+                      : 'liquid-glass border-white/10'
+                  }`}
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <div>
+                      <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">Show #{wl.show_id}</div>
+                      <div className="text-base font-black text-white mt-0.5">{wl.category_name} Tier</div>
+                    </div>
+                    <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${
+                      wl.status === 'OFFERED'
+                        ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 animate-pulse'
+                        : 'bg-blue-500/20 text-blue-300 border border-blue-500/40'
+                    }`}>
+                      {wl.status === 'OFFERED' ? '⚡ Seat Offered!' : `Queue Position #${wl.queue_position}`}
+                    </span>
+                  </div>
+
+                  {wl.status === 'OFFERED' && (
+                    <div className="mt-4 pt-4 border-t border-white/10">
+                      <p className="text-xs text-amber-300 mb-3">
+                        A released seat has been offered to you! You have an active claim window to complete checkout.
+                      </p>
+                      <Link
+                        to={`/waitlist/claim?token=${wl.offer_token}`}
+                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs shadow-lg shadow-amber-500/20 transition-all"
+                      >
+                        Claim Offered Seat Now <ArrowRight className="w-3.5 h-3.5" />
+                      </Link>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Section 2: Confirmed Bookings & QR Passes */}
         <div>
-          {bookings.length === 0 ? (
-            <div className="text-center py-16 bg-slate-900/40 rounded-3xl border border-slate-800 p-8">
+          <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+            <Ticket className="w-5 h-5 text-blue-400" />
+            My Bookings & QR Entry Passes
+          </h2>
+
+          {loading ? (
+            <div className="grid grid-cols-1 gap-4">
+              {[1, 2].map((n) => (
+                <div key={n} className="h-48 rounded-3xl liquid-glass border border-white/10 animate-pulse"></div>
+              ))}
+            </div>
+          ) : bookings.length === 0 ? (
+            <div className="p-12 text-center liquid-glass rounded-3xl border border-white/10">
               <Ticket className="w-12 h-12 text-slate-600 mx-auto mb-3" />
-              <h3 className="text-lg font-bold text-slate-300">No Tickets Yet</h3>
-              <p className="text-xs sm:text-sm text-slate-500 mt-1 max-w-sm mx-auto mb-6">
-                You have not booked any events yet. Explore upcoming movies and concerts to select your seats!
-              </p>
+              <h3 className="text-base font-bold text-slate-300">No active bookings yet</h3>
+              <p className="text-xs text-slate-500 mt-1 mb-6">Browse movies and concerts to select your seats.</p>
               <Link
-                to="/"
-                className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-lg shadow-blue-600/30"
+                to="/events"
+                className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-xs font-bold text-white shadow-lg"
               >
-                Browse Events →
+                Explore Events
               </Link>
             </div>
           ) : (
             <div className="space-y-8">
-              {bookings.map((booking) => (
-                <TicketCard
-                  key={booking.id}
-                  booking={booking}
-                  onCancel={handleCancelBooking}
-                />
+              {bookings.map((b) => (
+                <div
+                  key={b.id}
+                  className="liquid-glass rounded-3xl p-6 sm:p-8 border border-white/10 shadow-2xl backdrop-blur-xl"
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-white/10">
+                    <div>
+                      <div className="text-xs text-slate-400 font-medium">
+                        Booking Ref: <strong className="text-slate-100">{b.booking_reference}</strong>
+                      </div>
+                      <div className="text-lg font-black text-white mt-1">
+                        ${b.total_amount.toFixed(2)} • {b.tickets?.length || 0} Tickets
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
+                        b.status === 'CONFIRMED'
+                          ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                          : 'bg-red-500/20 text-red-300 border border-red-500/30'
+                      }`}>
+                        {b.status}
+                      </span>
+
+                      {b.status === 'CONFIRMED' && (
+                        <button
+                          onClick={() => handleCancelBooking(b.id)}
+                          disabled={cancellingId === b.id}
+                          className="px-3.5 py-1.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 text-xs font-bold transition-all disabled:opacity-50 cursor-pointer"
+                        >
+                          {cancellingId === b.id ? 'Cancelling...' : 'Cancel Booking'}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Individual E-Tickets */}
+                  <div className="mt-6 space-y-4">
+                    {b.tickets?.map((t) => (
+                      <TicketCard
+                        key={t.id}
+                        ticket={t}
+                        bookingReference={b.booking_reference}
+                      />
+                    ))}
+                  </div>
+                </div>
               ))}
             </div>
           )}
         </div>
-      ) : (
-        /* Waitlist Tab */
-        <div>
-          {waitlistEntries.length === 0 ? (
-            <div className="text-center py-16 bg-slate-900/40 rounded-3xl border border-slate-800 p-8">
-              <Clock className="w-12 h-12 text-slate-600 mx-auto mb-3" />
-              <h3 className="text-lg font-bold text-slate-300">No Active Waitlist Entries</h3>
-              <p className="text-xs sm:text-sm text-slate-500 mt-1 max-w-sm mx-auto">
-                When a high-demand show sells out, you can join its waitlist directly from the seat selection map.
-              </p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {waitlistEntries.map((entry) => {
-                const isOffered = entry.status === 'OFFERED' && entry.active_offer;
-                const offer = entry.active_offer;
-
-                return (
-                  <div
-                    key={entry.id}
-                    className={`p-6 rounded-3xl border transition-all shadow-xl flex flex-col justify-between ${
-                      isOffered
-                        ? 'bg-gradient-to-b from-amber-950/40 to-slate-900 border-amber-600/60 shadow-amber-500/10'
-                        : 'bg-slate-900 border-slate-800'
-                    }`}
-                  >
-                    <div>
-                      <div className="flex items-start justify-between mb-3">
-                        <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider ${
-                          isOffered
-                            ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 animate-pulse'
-                            : entry.status === 'WAITING'
-                            ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
-                            : 'bg-slate-800 text-slate-400'
-                        }`}>
-                          {isOffered ? 'Seat Offer Ready!' : entry.status}
-                        </span>
-
-                        <span className="text-[11px] text-slate-500">
-                          Joined: {new Date(entry.created_at).toLocaleDateString()}
-                        </span>
-                      </div>
-
-                      <h3 className="text-lg font-black text-white">{entry.event_title}</h3>
-                      <div className="text-xs text-slate-400 mt-1">{entry.venue_name}</div>
-                      <div className="text-xs text-purple-400 font-semibold mt-2">
-                        Target Tier: {entry.category_name}
-                      </div>
-
-                      {/* Active Offer Details */}
-                      {isOffered && offer && (
-                        <div className="mt-5 p-4 rounded-2xl bg-amber-950/60 border border-amber-600/50 space-y-3">
-                          <div className="flex items-center justify-between text-xs">
-                            <span className="text-amber-200 font-bold">Allocated Seat</span>
-                            <span className="font-mono text-white font-bold">
-                              {offer.row_label}{offer.seat_number} (${offer.price.toFixed(2)})
-                            </span>
-                          </div>
-
-                          <div className="flex items-center justify-between text-xs pt-2 border-t border-amber-800/40">
-                            <span className="text-amber-300 font-medium">Time Remaining to Claim</span>
-                            <HoldTimer expiresAt={offer.expires_at} onExpire={fetchDashboardData} />
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="mt-6 pt-4 border-t border-slate-800">
-                      {isOffered && offer ? (
-                        <Link
-                          to={`/waitlist/claim?token=${offer.offer_token}`}
-                          className="w-full py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs shadow-lg shadow-amber-500/30 transition-all flex items-center justify-center gap-2 text-center"
-                        >
-                          Claim & Book Allocated Seat Now →
-                        </Link>
-                      ) : (
-                        <div className="text-xs text-slate-500 flex items-center justify-between">
-                          <span>FIFO Queue Active</span>
-                          <span>Auto-notifies on cancellation</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
+      </div>
     </div>
   );
 }

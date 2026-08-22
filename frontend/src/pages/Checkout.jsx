@@ -1,208 +1,200 @@
 import React, { useState } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import api from '../services/api';
-import { useAuth } from '../context/AuthContext';
 import HoldTimer from '../components/HoldTimer';
-import { ShieldCheck, Ticket, CreditCard, ArrowLeft, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import Navbar from '../components/Navbar';
+import GalaxyBackground from '../components/GalaxyBackground';
+import { ShieldCheck, CreditCard, Ticket, ArrowLeft, AlertCircle, CheckCircle } from 'lucide-react';
 
 export default function Checkout() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user } = useAuth();
 
   const holdData = location.state?.holdData;
   const seatMapMeta = location.state?.seatMapMeta;
 
+  const [paymentMethod, setPaymentMethod] = useState('CARD');
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState(null);
-  const [isExpired, setIsExpired] = useState(false);
 
   if (!holdData) {
     return (
-      <div className="max-w-2xl mx-auto px-4 py-20 text-center">
-        <AlertTriangle className="w-12 h-12 text-amber-400 mx-auto mb-4" />
-        <h2 className="text-xl font-bold text-white mb-2">No Active Seat Hold Found</h2>
-        <p className="text-sm text-slate-400 mb-6">
-          Your hold session may have expired or was not initialized. Please select your seats.
-        </p>
-        <Link
-          to="/"
-          className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm"
-        >
-          Browse Events
-        </Link>
+      <div className="relative min-h-screen text-slate-100 flex items-center justify-center p-4">
+        <GalaxyBackground />
+        <div className="relative z-10 max-w-md w-full liquid-glass rounded-3xl p-8 text-center border border-white/10 shadow-2xl backdrop-blur-xl">
+          <AlertCircle className="w-12 h-12 text-amber-400 mx-auto mb-3" />
+          <h2 className="text-xl font-bold text-slate-200">No Active Seat Hold</h2>
+          <p className="text-xs text-slate-400 mt-2 mb-6">
+            Your session may have expired or no seats were held. Please select seats from the live map.
+          </p>
+          <Link
+            to="/events"
+            className="inline-block px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 font-bold text-xs text-white shadow-lg"
+          >
+            Browse Events
+          </Link>
+        </div>
       </div>
     );
   }
 
-  const handleHoldExpire = () => {
-    setIsExpired(true);
-    setError('Your 10-minute seat hold has expired. The seats have been released back to availability.');
+  const handleExpire = () => {
+    setError('Your 10-minute seat hold expired. Seats have been released back to the pool.');
   };
 
-  const handleConfirmBooking = async () => {
-    if (isExpired) return;
-
+  const handleConfirmBooking = async (e) => {
+    e.preventDefault();
     setProcessing(true);
     setError(null);
 
     try {
-      const res = await api.post('/bookings', {
+      const payload = {
         hold_token: holdData.hold_token,
-      });
-      // Navigate to confirmation page
+        payment_method: paymentMethod,
+      };
+      const res = await api.post('/bookings/confirm', payload);
       navigate('/confirmation', { state: { booking: res.data } });
     } catch (err) {
-      setError(err.response?.data?.detail || 'Failed to complete booking. Hold may have expired.');
+      setError(err.response?.data?.detail || 'Payment confirmation failed. Please try again.');
     } finally {
       setProcessing(false);
     }
   };
 
-  const handleReleaseHold = async () => {
-    try {
-      await api.post('/holds/release', { hold_token: holdData.hold_token });
-    } catch (e) {
-      // Ignore
-    }
-    navigate(`/shows/${holdData.show_id}/seats`);
-  };
-
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-      <button
-        onClick={handleReleaseHold}
-        className="inline-flex items-center gap-2 text-xs font-semibold text-slate-400 hover:text-slate-200 mb-6 transition-colors"
-      >
-        <ArrowLeft className="w-4 h-4" />
-        Cancel & Release Held Seats
-      </button>
+    <div className="relative min-h-screen text-slate-100 pb-16 overflow-x-hidden">
+      {/* Galaxy Background */}
+      <GalaxyBackground />
 
-      {/* Top Banner with Hold Timer */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 bg-slate-900 border border-slate-800 rounded-3xl mb-8 shadow-xl">
-        <div>
-          <span className="text-xs font-bold text-blue-400 uppercase tracking-wider">Checkout Session</span>
-          <h1 className="text-2xl font-black text-white mt-0.5">Review & Confirm Tickets</h1>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <div className="text-right hidden sm:block">
-            <div className="text-[11px] font-medium text-slate-400">Seats Reserved For</div>
-          </div>
-          <HoldTimer expiresAt={holdData.expires_at} onExpire={handleHoldExpire} />
-        </div>
+      {/* Header Bar */}
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <Navbar />
       </div>
 
-      {error && (
-        <div className="p-4 rounded-2xl bg-red-950/80 border border-red-800 text-red-300 text-sm mb-6 flex items-start gap-3 shadow-lg">
-          <AlertTriangle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
-          <div>
-            <div className="font-bold text-red-200">Checkout Notice</div>
-            <div>{error}</div>
-            {isExpired && (
-              <Link
-                to={`/shows/${holdData.show_id}/seats`}
-                className="inline-block mt-2 text-xs font-bold text-red-300 underline"
-              >
-                Re-select seats on seat map →
-              </Link>
-            )}
-          </div>
-        </div>
-      )}
+      <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
+        <Link
+          to={`/shows/${holdData.show_id}/seats`}
+          className="inline-flex items-center gap-2 text-xs font-semibold text-slate-400 hover:text-slate-200 mb-6 transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" /> Back to Seat Selection
+        </Link>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        {/* Left: Customer Info & Payment Note */}
-        <div className="md:col-span-2 space-y-6">
-          <div className="bg-slate-900 p-6 rounded-3xl border border-slate-800 shadow-xl">
-            <h3 className="text-base font-bold text-white mb-4 flex items-center gap-2">
-              <ShieldCheck className="w-5 h-5 text-emerald-400" />
-              Ticket Holder Information
-            </h3>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-              <div>
-                <label className="block text-xs font-semibold text-slate-400 mb-1">Full Name</label>
-                <div className="px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 font-semibold text-slate-200">
-                  {user?.full_name}
-                </div>
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-slate-400 mb-1">Email for QR Ticket</label>
-                <div className="px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 font-semibold text-slate-200">
-                  {user?.email}
-                </div>
-              </div>
-            </div>
-            <p className="text-xs text-slate-500 mt-3">
-              Your QR tickets will be generated server-side and dispatched immediately to this email.
-            </p>
-          </div>
-
-          {/* Payment Method Details */}
-          <div className="bg-slate-900 p-6 rounded-3xl border border-slate-800 shadow-xl">
-            <h3 className="text-base font-bold text-white mb-3 flex items-center gap-2">
-              <CreditCard className="w-5 h-5 text-blue-400" />
-              Payment Processing
-            </h3>
-            <div className="p-4 rounded-2xl bg-blue-950/30 border border-blue-900/50 text-xs text-blue-200 leading-relaxed flex items-center gap-3">
-              <CheckCircle2 className="w-5 h-5 text-blue-400 shrink-0" />
-              <span>
-                Demonstration checkout enabled. Click confirm below to complete the transaction and issue your entry QR tickets.
-              </span>
-            </div>
-          </div>
+        {/* Hold Countdown Banner */}
+        <div className="mb-8">
+          <HoldTimer expiresAt={holdData.expires_at} onExpire={handleExpire} />
         </div>
 
-        {/* Right: Order Summary */}
-        <div className="bg-slate-900 p-6 rounded-3xl border border-slate-800 shadow-xl h-fit flex flex-col justify-between">
-          <div>
-            <h3 className="text-base font-bold text-white mb-4">Order Summary</h3>
+        {error && (
+          <div className="mb-6 p-4 rounded-2xl bg-red-950/80 border border-red-800 text-red-300 text-sm flex items-center gap-3 shadow-lg backdrop-blur-md">
+            <AlertCircle className="w-5 h-5 shrink-0 text-red-400" />
+            <span>{error}</span>
+          </div>
+        )}
 
-            <div className="divide-y divide-slate-800 mb-6">
-              {holdData.seats?.map((seat) => (
-                <div key={seat.show_seat_id} className="py-3 flex items-center justify-between text-sm">
-                  <div>
-                    <div className="font-bold text-slate-200">Seat {seat.row_label}{seat.seat_number}</div>
-                    <div className="text-xs text-slate-400">{seat.category_name}</div>
-                  </div>
-                  <div className="font-mono font-bold text-slate-100">${seat.price.toFixed(2)}</div>
-                </div>
-              ))}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          {/* Left Column: Payment & Guest Info */}
+          <div className="md:col-span-2 space-y-6">
+            {/* Payment Method */}
+            <div className="liquid-glass rounded-3xl p-6 sm:p-8 border border-white/10 shadow-2xl backdrop-blur-xl">
+              <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                <CreditCard className="w-5 h-5 text-blue-400" />
+                Payment Method
+              </h2>
+
+              <div className="grid grid-cols-2 gap-3 mb-6">
+                <button
+                  type="button"
+                  onClick={() => setPaymentMethod('CARD')}
+                  className={`p-4 rounded-2xl border text-left transition-all cursor-pointer ${
+                    paymentMethod === 'CARD'
+                      ? 'bg-blue-600/20 border-blue-500/80 text-white'
+                      : 'bg-black/40 border-white/10 text-slate-400 hover:border-white/20'
+                  }`}
+                >
+                  <div className="font-bold text-sm">Credit / Debit Card</div>
+                  <div className="text-xs text-slate-400 mt-1">Instant confirmation</div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setPaymentMethod('UPI')}
+                  className={`p-4 rounded-2xl border text-left transition-all cursor-pointer ${
+                    paymentMethod === 'UPI'
+                      ? 'bg-blue-600/20 border-blue-500/80 text-white'
+                      : 'bg-black/40 border-white/10 text-slate-400 hover:border-white/20'
+                  }`}
+                >
+                  <div className="font-bold text-sm">UPI / QR Pay</div>
+                  <div className="text-xs text-slate-400 mt-1">GooglePay, PhonePe, Paytm</div>
+                </button>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-black/40 border border-white/10 text-xs text-slate-300 flex items-center gap-3">
+                <ShieldCheck className="w-5 h-5 text-emerald-400 shrink-0" />
+                <span>
+                  Demo Sandbox Mode active: Payments are simulated with mock transaction processing.
+                </span>
+              </div>
             </div>
 
-            <div className="pt-4 border-t border-slate-800 space-y-2 mb-6 text-sm">
-              <div className="flex justify-between text-slate-400 text-xs">
-                <span>Subtotal</span>
-                <span>${holdData.total_amount?.toFixed(2)}</span>
+            {/* Confirm Button */}
+            <button
+              onClick={handleConfirmBooking}
+              disabled={processing}
+              className="w-full py-4 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-black text-base shadow-2xl shadow-blue-600/30 transition-all flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+            >
+              {processing ? (
+                <>
+                  <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
+                  Generating QR Tickets & Confirming...
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="w-5 h-5" />
+                  Confirm & Pay ${holdData.total_price.toFixed(2)}
+                </>
+              )}
+            </button>
+          </div>
+
+          {/* Right Column: Order Summary */}
+          <div className="md:col-span-1">
+            <div className="liquid-glass rounded-3xl p-6 border border-white/10 shadow-2xl backdrop-blur-xl sticky top-6">
+              <h3 className="text-sm font-bold text-slate-200 uppercase tracking-wider mb-4 flex items-center gap-2">
+                <Ticket className="w-4 h-4 text-blue-400" />
+                Order Summary
+              </h3>
+
+              <div className="space-y-3 pb-4 border-b border-white/10 text-xs">
+                <div className="text-slate-400 font-medium">Held Seats:</div>
+                <div className="flex flex-wrap gap-1.5">
+                  {holdData.held_seats?.map((s) => (
+                    <span
+                      key={s.show_seat_id}
+                      className="px-2.5 py-1 rounded-lg bg-blue-600/20 border border-blue-500/40 text-blue-200 font-bold"
+                    >
+                      {s.row_label}{s.seat_number}
+                    </span>
+                  ))}
+                </div>
               </div>
-              <div className="flex justify-between text-slate-400 text-xs">
-                <span>Booking Fee</span>
-                <span>$0.00</span>
-              </div>
-              <div className="flex justify-between text-base font-black text-white pt-2 border-t border-slate-800">
-                <span>Total Due</span>
-                <span className="text-emerald-400">${holdData.total_amount?.toFixed(2)}</span>
+
+              <div className="pt-4 space-y-2 text-xs">
+                <div className="flex justify-between text-slate-400">
+                  <span>Subtotal ({holdData.held_seats?.length} seats)</span>
+                  <span className="text-slate-200 font-semibold">${holdData.total_price.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-slate-400">
+                  <span>Convenience Fee</span>
+                  <span className="text-emerald-400 font-semibold">$0.00</span>
+                </div>
+                <div className="pt-3 border-t border-white/10 flex justify-between text-base font-black text-white">
+                  <span>Total Due</span>
+                  <span>${holdData.total_price.toFixed(2)}</span>
+                </div>
               </div>
             </div>
           </div>
-
-          <button
-            onClick={handleConfirmBooking}
-            disabled={processing || isExpired}
-            className="w-full py-3.5 rounded-xl font-black text-sm text-white bg-blue-600 hover:bg-blue-500 shadow-xl shadow-blue-600/30 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-          >
-            {processing ? (
-              <>
-                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-                Generating QR Ticket...
-              </>
-            ) : isExpired ? (
-              'Hold Expired'
-            ) : (
-              'Confirm & Book Tickets →'
-            )}
-          </button>
         </div>
       </div>
     </div>

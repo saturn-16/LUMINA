@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import api from '../services/api';
 import { Search, Film, Music, Calendar, MapPin, Sparkles, ArrowLeft, ArrowRight } from 'lucide-react';
 import Navbar from '../components/Navbar';
+import GalaxyBackground from '../components/GalaxyBackground';
 
 export default function Home() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -48,13 +49,16 @@ export default function Home() {
   }, [searchQuery, selectedType, selectedCity]);
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 pb-16">
+    <div className="relative min-h-screen text-slate-100 pb-16 overflow-x-hidden">
+      {/* Galaxy Background */}
+      <GalaxyBackground />
+
       {/* Header Bar */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <Navbar />
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
         {/* Back Link */}
         <Link
           to="/"
@@ -65,7 +69,7 @@ export default function Home() {
         </Link>
 
         {/* Hero Discovery Banner */}
-        <div className="relative rounded-3xl overflow-hidden bg-gradient-to-br from-blue-950 via-slate-900 to-indigo-950 border border-slate-800 p-6 sm:p-10 mb-10 shadow-2xl">
+        <div className="relative rounded-3xl overflow-hidden liquid-glass border border-white/10 p-6 sm:p-10 mb-10 shadow-2xl backdrop-blur-xl">
           <div className="relative z-10 max-w-2xl">
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-blue-500/20 text-blue-300 border border-blue-500/30 mb-4">
               <Sparkles className="w-3.5 h-3.5" />
@@ -79,8 +83,8 @@ export default function Home() {
             </p>
 
             {/* Search Filter Inputs */}
-            <div className="flex flex-col sm:flex-row gap-3 bg-slate-900/90 p-2 rounded-2xl border border-slate-700/80 shadow-xl backdrop-blur-md">
-              <div className="flex items-center gap-2 flex-1 px-3 py-2 bg-slate-950/60 rounded-xl border border-slate-800">
+            <div className="flex flex-col sm:flex-row gap-3 liquid-glass p-2 rounded-2xl border border-white/10 shadow-xl backdrop-blur-md">
+              <div className="flex items-center gap-2 flex-1 px-3 py-2 bg-black/40 rounded-xl border border-white/10">
                 <Search className="w-4 h-4 text-slate-400 shrink-0" />
                 <input
                   type="text"
@@ -91,7 +95,7 @@ export default function Home() {
                 />
               </div>
 
-              <div className="flex items-center gap-2 px-3 py-2 bg-slate-950/60 rounded-xl border border-slate-800 sm:w-48">
+              <div className="flex items-center gap-2 px-3 py-2 bg-black/40 rounded-xl border border-white/10 sm:w-48">
                 <MapPin className="w-4 h-4 text-slate-400 shrink-0" />
                 <input
                   type="text"
@@ -112,7 +116,7 @@ export default function Home() {
             className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all ${
               selectedType === 'ALL'
                 ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
-                : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
+                : 'liquid-glass text-slate-400 hover:text-slate-200 border border-white/10'
             }`}
           >
             All Events
@@ -122,7 +126,7 @@ export default function Home() {
             className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-2 ${
               selectedType === 'MOVIE'
                 ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
-                : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
+                : 'liquid-glass text-slate-400 hover:text-slate-200 border border-white/10'
             }`}
           >
             <Film className="w-4 h-4" />
@@ -133,7 +137,7 @@ export default function Home() {
             className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-2 ${
               selectedType === 'CONCERT'
                 ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
-                : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
+                : 'liquid-glass text-slate-400 hover:text-slate-200 border border-white/10'
             }`}
           >
             <Music className="w-4 h-4" />
@@ -145,11 +149,11 @@ export default function Home() {
         {loading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[1, 2, 3].map((n) => (
-              <div key={n} className="h-96 rounded-2xl bg-slate-900 border border-slate-800 animate-pulse"></div>
+              <div key={n} className="h-96 rounded-3xl liquid-glass border border-white/10 animate-pulse"></div>
             ))}
           </div>
         ) : events.length === 0 ? (
-          <div className="text-center py-16 bg-slate-900/50 rounded-2xl border border-slate-800">
+          <div className="text-center py-16 liquid-glass rounded-3xl border border-white/10">
             <Film className="w-12 h-12 text-slate-600 mx-auto mb-3" />
             <h3 className="text-lg font-bold text-slate-300">No events found</h3>
             <p className="text-sm text-slate-500 mt-1">Try adjusting your search query or filters.</p>
@@ -160,10 +164,10 @@ export default function Home() {
               <Link
                 key={evt.id}
                 to={`/events/${evt.id}`}
-                className="group bg-slate-900 rounded-3xl overflow-hidden border border-slate-800 hover:border-blue-500/50 transition-all duration-200 flex flex-col hover:-translate-y-1 hover:shadow-xl hover:shadow-blue-500/10"
+                className="group liquid-glass rounded-3xl overflow-hidden border border-white/10 hover:border-blue-400/50 transition-all duration-300 flex flex-col hover:-translate-y-1 hover:shadow-2xl hover:shadow-blue-500/10 backdrop-blur-xl"
               >
                 {/* Event Image */}
-                <div className="relative h-48 w-full overflow-hidden bg-slate-950">
+                <div className="relative h-48 w-full overflow-hidden bg-black/60">
                   <img
                     src={evt.banner_url || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=800&auto=format&fit=crop&q=80'}
                     alt={evt.title}
@@ -178,7 +182,7 @@ export default function Home() {
                       {evt.event_type}
                     </span>
                   </div>
-                  <div className="absolute bottom-3 right-3 bg-slate-900/90 backdrop-blur-md px-2.5 py-1 rounded-lg text-xs font-medium text-slate-300 border border-slate-700">
+                  <div className="absolute bottom-3 right-3 bg-black/80 backdrop-blur-md px-2.5 py-1 rounded-lg text-xs font-medium text-slate-300 border border-white/10">
                     {evt.duration_minutes} mins
                   </div>
                 </div>
@@ -194,14 +198,14 @@ export default function Home() {
                     </p>
                   </div>
 
-                  <div className="mt-5 pt-4 border-t border-slate-800 flex items-center justify-between">
+                  <div className="mt-5 pt-4 border-t border-white/10 flex items-center justify-between">
                     <div>
                       <div className="text-[11px] text-slate-400 font-medium">Tickets From</div>
                       <div className="text-base font-bold text-slate-100">
                         {evt.min_price ? `$${evt.min_price.toFixed(2)}` : 'Pricing TBA'}
                       </div>
                     </div>
-                    <span className="px-3.5 py-1.5 rounded-xl bg-blue-600/10 text-blue-400 border border-blue-500/20 text-xs font-bold group-hover:bg-blue-600 group-hover:text-white transition-all flex items-center gap-1">
+                    <span className="px-3.5 py-1.5 rounded-xl bg-blue-600/20 text-blue-400 border border-blue-500/30 text-xs font-bold group-hover:bg-blue-600 group-hover:text-white transition-all flex items-center gap-1">
                       Select Seats <ArrowRight className="w-3.5 h-3.5" />
                     </span>
                   </div>

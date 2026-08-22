@@ -4,6 +4,8 @@ import api from '../services/api';
 import { connectShowWebSocket } from '../services/websocket';
 import { useAuth } from '../context/AuthContext';
 import SeatMap from '../components/SeatMap';
+import Navbar from '../components/Navbar';
+import GalaxyBackground from '../components/GalaxyBackground';
 import { ArrowLeft, Clock, ShieldCheck, AlertCircle, Sparkles, UserPlus, CheckCircle } from 'lucide-react';
 
 export default function SeatSelection() {
@@ -44,11 +46,10 @@ export default function SeatSelection() {
     const socket = connectShowWebSocket(
       showId,
       (message) => {
-        // Refresh seat map on real-time broadcast
         fetchSeatMap();
       },
       (err) => {
-        // Fallback polling if websocket fails
+        // Fallback polling
       }
     );
 
@@ -90,11 +91,9 @@ export default function SeatSelection() {
         show_seat_ids: selectedSeats.map((s) => s.show_seat_id),
       };
       const res = await api.post('/holds', payload);
-      // Navigate to checkout with hold data
       navigate('/checkout', { state: { holdData: res.data, seatMapMeta: seatMap } });
     } catch (err) {
       setError(err.response?.data?.detail || 'Failed to place temporary hold. Please re-select seats.');
-      // Refresh map to reflect taken seats
       fetchSeatMap();
       setSelectedSeats([]);
     } finally {
@@ -129,9 +128,12 @@ export default function SeatSelection() {
 
   if (loading) {
     return (
-      <div className="max-w-6xl mx-auto px-4 py-20 text-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
-        <p className="text-slate-400 mt-4 text-sm font-medium">Loading live seat grid...</p>
+      <div className="relative min-h-screen text-slate-100 flex items-center justify-center">
+        <GalaxyBackground />
+        <div className="relative z-10 text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
+          <p className="text-slate-400 mt-4 text-xs uppercase tracking-widest font-semibold">Loading live seat map...</p>
+        </div>
       </div>
     );
   }
@@ -139,157 +141,167 @@ export default function SeatSelection() {
   const isConcert = seatMap?.event_title?.toLowerCase().includes('tour') || seatMap?.event_title?.toLowerCase().includes('symphony');
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-36">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-        <div>
-          <Link
-            to={`/events/${seatMap?.event_id}`}
-            className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-slate-200 mb-2 transition-colors"
-          >
-            <ArrowLeft className="w-3.5 h-3.5" /> Back to Event Showtimes
-          </Link>
-          <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-            {seatMap?.event_title}
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-400 mt-0.5">
-            {seatMap?.venue_name} • Real-Time Seating
-          </p>
-        </div>
+    <div className="relative min-h-screen text-slate-100 pb-36 overflow-x-hidden">
+      {/* Galaxy Background */}
+      <GalaxyBackground />
 
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => setShowWaitlistModal(true)}
-            className="px-4 py-2 rounded-xl bg-purple-950/60 border border-purple-800/80 text-purple-300 hover:bg-purple-900/80 text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm"
-          >
-            <UserPlus className="w-4 h-4 text-purple-400" />
-            Join Waitlist
-          </button>
-        </div>
+      {/* Header Bar */}
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <Navbar />
       </div>
 
-      {error && (
-        <div className="mb-6 p-4 rounded-xl bg-red-950/80 border border-red-800 text-red-300 text-sm flex items-center gap-3 shadow-lg">
-          <AlertCircle className="w-5 h-5 shrink-0 text-red-400" />
-          <span>{error}</span>
-        </div>
-      )}
-
-      {/* Visual Seat Map */}
-      <div className="bg-slate-900/70 backdrop-blur-md rounded-3xl p-6 sm:p-10 border border-slate-800 shadow-2xl">
-        <SeatMap
-          seatMapData={seatMap}
-          selectedSeats={selectedSeats}
-          onToggleSeat={handleToggleSeat}
-          isConcert={isConcert}
-        />
-      </div>
-
-      {/* Fixed Bottom Action Bar */}
-      {selectedSeats.length > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 z-40 bg-slate-900/95 backdrop-blur-xl border-t border-slate-800 shadow-2xl p-4 sm:p-6 transition-all duration-300">
-          <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-4 w-full sm:w-auto">
-              <div>
-                <div className="text-xs text-slate-400 font-medium">Selected Seats ({selectedSeats.length})</div>
-                <div className="flex flex-wrap gap-1.5 mt-1">
-                  {selectedSeats.map((s) => (
-                    <span
-                      key={s.show_seat_id}
-                      className="px-2 py-0.5 rounded-md bg-blue-600/20 border border-blue-500/40 text-blue-300 text-xs font-bold"
-                    >
-                      {s.row_label}{s.seat_number} (${s.price.toFixed(0)})
-                    </span>
-                  ))}
-                </div>
-              </div>
-
-              <div className="h-8 w-px bg-slate-800 hidden sm:block"></div>
-
-              <div>
-                <div className="text-xs text-slate-400 font-medium">Total Amount</div>
-                <div className="text-xl font-black text-white">${totalPrice.toFixed(2)}</div>
-              </div>
-            </div>
-
-            <button
-              onClick={handleProceedToHold}
-              disabled={holding}
-              className="w-full sm:w-auto px-8 py-3.5 rounded-xl font-black text-sm text-white bg-blue-600 hover:bg-blue-500 shadow-xl shadow-blue-600/30 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+      <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+          <div>
+            <Link
+              to={`/events/${seatMap?.event_id}`}
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-slate-200 mb-2 transition-colors"
             >
-              {holding ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-                  Locking Seats (SELECT FOR UPDATE)...
-                </>
-              ) : (
-                <>
-                  <Clock className="w-4 h-4" />
-                  Hold Seats & Checkout (10m TTL) →
-                </>
-              )}
+              <ArrowLeft className="w-3.5 h-3.5" /> Back to Event Showtimes
+            </Link>
+            <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+              {seatMap?.event_title}
+            </h1>
+            <p className="text-xs sm:text-sm text-slate-400 mt-0.5">
+              {seatMap?.venue_name} • Real-Time Seating
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setShowWaitlistModal(true)}
+              className="px-4 py-2 rounded-xl liquid-glass border border-purple-500/40 text-purple-300 hover:bg-purple-950/40 text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm cursor-pointer"
+            >
+              <UserPlus className="w-4 h-4 text-purple-400" />
+              Join Waitlist
             </button>
           </div>
         </div>
-      )}
 
-      {/* Waitlist Modal */}
-      {showWaitlistModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl">
-            <h3 className="text-lg font-bold text-white mb-2 flex items-center gap-2">
-              <UserPlus className="w-5 h-5 text-purple-400" />
-              Join Category Waitlist
-            </h3>
-            <p className="text-xs text-slate-400 mb-6">
-              When tickets are cancelled, released seats are automatically offered to the next customer in the FIFO waitlist queue.
-            </p>
-
-            {waitlistSuccess ? (
-              <div className="p-4 rounded-xl bg-emerald-950/80 border border-emerald-800 text-emerald-300 text-sm flex items-center gap-3">
-                <CheckCircle className="w-5 h-5 text-emerald-400 shrink-0" />
-                <span>{waitlistSuccess}</span>
-              </div>
-            ) : (
-              <form onSubmit={handleJoinWaitlist} className="space-y-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                    Select Target Seat Category
-                  </label>
-                  <select
-                    value={selectedWaitlistCat}
-                    onChange={(e) => setSelectedWaitlistCat(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-200 text-sm focus:outline-none focus:border-purple-500"
-                  >
-                    {seatMap?.categories?.map((cat) => (
-                      <option key={cat.id} value={cat.id}>
-                        {cat.name} (Tier {cat.tier_level})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-800">
-                  <button
-                    type="button"
-                    onClick={() => setShowWaitlistModal(false)}
-                    className="px-4 py-2 text-xs font-semibold text-slate-400 hover:text-slate-200"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={waitlistJoining}
-                    className="px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold shadow-lg shadow-purple-600/30 transition-all disabled:opacity-50"
-                  >
-                    {waitlistJoining ? 'Joining Queue...' : 'Confirm Waitlist Spot'}
-                  </button>
-                </div>
-              </form>
-            )}
+        {error && (
+          <div className="mb-6 p-4 rounded-2xl bg-red-950/80 border border-red-800 text-red-300 text-sm flex items-center gap-3 shadow-lg backdrop-blur-md">
+            <AlertCircle className="w-5 h-5 shrink-0 text-red-400" />
+            <span>{error}</span>
           </div>
+        )}
+
+        {/* Visual Seat Map */}
+        <div className="liquid-glass rounded-3xl p-6 sm:p-10 border border-white/10 shadow-2xl backdrop-blur-xl">
+          <SeatMap
+            seatMapData={seatMap}
+            selectedSeats={selectedSeats}
+            onToggleSeat={handleToggleSeat}
+            isConcert={isConcert}
+          />
         </div>
-      )}
+
+        {/* Fixed Bottom Action Bar */}
+        {selectedSeats.length > 0 && (
+          <div className="fixed bottom-0 left-0 right-0 z-40 liquid-glass-strong border-t border-white/10 shadow-2xl p-4 sm:p-6 transition-all duration-300 backdrop-blur-2xl">
+            <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="flex items-center gap-4 w-full sm:w-auto">
+                <div>
+                  <div className="text-xs text-slate-400 font-medium">Selected Seats ({selectedSeats.length})</div>
+                  <div className="flex flex-wrap gap-1.5 mt-1">
+                    {selectedSeats.map((s) => (
+                      <span
+                        key={s.show_seat_id}
+                        className="px-2 py-0.5 rounded-md bg-blue-600/20 border border-blue-500/40 text-blue-300 text-xs font-bold"
+                      >
+                        {s.row_label}{s.seat_number} (${s.price.toFixed(0)})
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="h-8 w-px bg-white/10 hidden sm:block"></div>
+
+                <div>
+                  <div className="text-xs text-slate-400 font-medium">Total Amount</div>
+                  <div className="text-xl font-black text-white">${totalPrice.toFixed(2)}</div>
+                </div>
+              </div>
+
+              <button
+                onClick={handleProceedToHold}
+                disabled={holding}
+                className="w-full sm:w-auto px-8 py-3.5 rounded-xl font-black text-sm text-white bg-blue-600 hover:bg-blue-500 shadow-xl shadow-blue-600/30 transition-all flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+              >
+                {holding ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                    Locking Seats (SELECT FOR UPDATE)...
+                  </>
+                ) : (
+                  <>
+                    <Clock className="w-4 h-4" />
+                    Hold Seats & Checkout (10m TTL) →
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Waitlist Modal */}
+        {showWaitlistModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
+            <div className="liquid-glass border border-white/15 rounded-3xl max-w-md w-full p-6 shadow-2xl backdrop-blur-2xl">
+              <h3 className="text-lg font-bold text-white mb-2 flex items-center gap-2">
+                <UserPlus className="w-5 h-5 text-purple-400" />
+                Join Category Waitlist
+              </h3>
+              <p className="text-xs text-slate-400 mb-6">
+                When tickets are cancelled, released seats are automatically offered to the next customer in the FIFO waitlist queue.
+              </p>
+
+              {waitlistSuccess ? (
+                <div className="p-4 rounded-xl bg-emerald-950/80 border border-emerald-800 text-emerald-300 text-sm flex items-center gap-3">
+                  <CheckCircle className="w-5 h-5 text-emerald-400 shrink-0" />
+                  <span>{waitlistSuccess}</span>
+                </div>
+              ) : (
+                <form onSubmit={handleJoinWaitlist} className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                      Select Target Seat Category
+                    </label>
+                    <select
+                      value={selectedWaitlistCat}
+                      onChange={(e) => setSelectedWaitlistCat(e.target.value)}
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-black/60 border border-white/15 text-slate-200 text-sm focus:outline-none focus:border-purple-500"
+                    >
+                      {seatMap?.categories?.map((cat) => (
+                        <option key={cat.id} value={cat.id}>
+                          {cat.name} (Tier {cat.tier_level})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="flex items-center justify-end gap-3 pt-4 border-t border-white/10">
+                    <button
+                      type="button"
+                      onClick={() => setShowWaitlistModal(false)}
+                      className="px-4 py-2 text-xs font-semibold text-slate-400 hover:text-slate-200 cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={waitlistJoining}
+                      className="px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold shadow-lg shadow-purple-600/30 transition-all disabled:opacity-50 cursor-pointer"
+                    >
+                      {waitlistJoining ? 'Joining Queue...' : 'Confirm Waitlist Spot'}
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

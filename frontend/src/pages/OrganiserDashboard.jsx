@@ -1,50 +1,50 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
-import { DollarSign, Ticket, Users, Plus, Calendar, Film, Music, MapPin, X, TrendingUp } from 'lucide-react';
+import Navbar from '../components/Navbar';
+import GalaxyBackground from '../components/GalaxyBackground';
+import { Film, Music, PlusCircle, DollarSign, Users, Calendar, TrendingUp, CheckCircle, AlertCircle } from 'lucide-react';
 
 export default function OrganiserDashboard() {
-  const [analytics, setAnalytics] = useState(null);
-  const [venues, setVenues] = useState([]);
   const [events, setEvents] = useState([]);
+  const [venues, setVenues] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Modals
+  // Modal States
   const [showEventModal, setShowEventModal] = useState(false);
-  const [showShowModal, setShowShowModal] = useState(false);
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [selectedEventId, setSelectedEventId] = useState(null);
 
-  // Event Form
+  // Form States
   const [eventForm, setEventForm] = useState({
     title: '',
     description: '',
     event_type: 'MOVIE',
-    banner_url: '',
     duration_minutes: 120,
+    banner_url: '',
   });
 
-  // Show Form
-  const [showForm, setShowForm] = useState({
-    event_id: '',
+  const [scheduleForm, setScheduleForm] = useState({
     venue_id: '',
     start_time: '',
-    end_time: '',
-    pricing: {},
+    tier_prices: {}, // e.g. { category_id: price }
   });
 
   const [selectedVenueMeta, setSelectedVenueMeta] = useState(null);
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState(null);
+  const [actionSuccess, setActionSuccess] = useState(null);
 
   const fetchOrganiserData = async () => {
     try {
       setLoading(true);
-      const [analyticsRes, eventsRes, venuesRes] = await Promise.all([
-        api.get('/organiser/analytics'),
+      const [eventsRes, venuesRes] = await Promise.all([
         api.get('/organiser/events'),
-        api.get('/admin/venues'),
+        api.get('/venues'),
       ]);
-      setAnalytics(analyticsRes.data);
       setEvents(eventsRes.data);
       setVenues(venuesRes.data);
+      if (venuesRes.data.length > 0) {
+        setScheduleForm((prev) => ({ ...prev, venue_id: String(venuesRes.data[0].id) }));
+        setSelectedVenueMeta(venuesRes.data[0]);
+      }
     } catch (err) {
       console.error('Failed to load organiser data', err);
     } finally {
@@ -58,441 +58,342 @@ export default function OrganiserDashboard() {
 
   const handleCreateEvent = async (e) => {
     e.preventDefault();
-    setSubmitting(true);
-    setError(null);
     try {
       await api.post('/organiser/events', {
         ...eventForm,
         duration_minutes: parseInt(eventForm.duration_minutes, 10),
       });
       setShowEventModal(false);
-      setEventForm({
-        title: '',
-        description: '',
-        event_type: 'MOVIE',
-        banner_url: '',
-        duration_minutes: 120,
-      });
+      setActionSuccess('New event created successfully!');
       fetchOrganiserData();
     } catch (err) {
-      setError(err.response?.data?.detail || 'Failed to create event.');
-    } finally {
-      setSubmitting(false);
+      alert(err.response?.data?.detail || 'Failed to create event.');
     }
   };
 
   const handleVenueChange = (venueId) => {
-    const venue = venues.find((v) => v.id === parseInt(venueId, 10));
-    setSelectedVenueMeta(venue || null);
-    setShowForm((prev) => ({
+    setScheduleForm((prev) => ({ ...prev, venue_id: venueId }));
+    const v = venues.find((x) => String(x.id) === String(venueId));
+    setSelectedVenueMeta(v);
+  };
+
+  const handlePriceChange = (catId, price) => {
+    setScheduleForm((prev) => ({
       ...prev,
-      venue_id: venueId,
-      pricing: venue
-        ? venue.categories.reduce((acc, cat) => ({ ...acc, [cat.id]: 25.0 }), {})
-        : {},
+      tier_prices: {
+        ...prev.tier_prices,
+        [catId]: parseFloat(price) || 0,
+      },
     }));
   };
 
-  const handleCreateShow = async (e) => {
+  const handleScheduleShow = async (e) => {
     e.preventDefault();
-    setSubmitting(true);
-    setError(null);
     try {
-      const pricingList = Object.keys(showForm.pricing).map((catId) => ({
-        category_id: parseInt(catId, 10),
-        price: parseFloat(showForm.pricing[catId]),
-      }));
+      const payload = {
+        event_id: selectedEventId,
+        venue_id: parseInt(scheduleForm.venue_id, 10),
+        start_time: new Date(scheduleForm.start_time).toISOString(),
+        pricing: Object.entries(scheduleForm.tier_prices).map(([catId, price]) => ({
+          category_id: parseInt(catId, 10),
+          price: price,
+        })),
+      };
 
-      await api.post('/organiser/shows', {
-        event_id: parseInt(showForm.event_id, 10),
-        venue_id: parseInt(showForm.venue_id, 10),
-        start_time: new Date(showForm.start_time).toISOString(),
-        end_time: new Date(showForm.end_time).toISOString(),
-        pricing: pricingList,
-      });
-
-      setShowShowModal(false);
-      setShowForm({
-        event_id: '',
-        venue_id: '',
-        start_time: '',
-        end_time: '',
-        pricing: {},
-      });
+      await api.post('/organiser/shows', payload);
+      setShowScheduleModal(false);
+      setActionSuccess('Show scheduled successfully with category tier pricing and seat grid initialization!');
       fetchOrganiserData();
     } catch (err) {
-      setError(err.response?.data?.detail || 'Failed to schedule show.');
-    } finally {
-      setSubmitting(false);
+      alert(err.response?.data?.detail || 'Failed to schedule show.');
     }
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-        <div>
-          <span className="text-xs font-bold text-purple-400 uppercase tracking-wider">Organiser Management</span>
-          <h1 className="text-2xl sm:text-3xl font-black text-white mt-0.5">
-            Organiser Studio & Analytics
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-400 mt-1">
-            Create movies/concerts, schedule showtimes with per-tier pricing, and track live ticket sales.
-          </p>
-        </div>
+    <div className="relative min-h-screen text-slate-100 pb-24 overflow-x-hidden">
+      {/* Galaxy Background */}
+      <GalaxyBackground />
 
-        <div className="flex items-center gap-3">
+      {/* Header Bar */}
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <Navbar />
+      </div>
+
+      <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+          <div>
+            <span className="text-xs uppercase tracking-widest text-purple-400 font-bold">Studio Hub</span>
+            <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight mt-0.5">
+              Organiser Dashboard & Analytics
+            </h1>
+          </div>
+
           <button
             onClick={() => setShowEventModal(true)}
-            className="px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs shadow-lg shadow-purple-600/30 transition-all flex items-center gap-1.5"
+            className="px-5 py-2.5 rounded-2xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs shadow-xl shadow-purple-600/30 flex items-center gap-2 self-start cursor-pointer transition-all"
           >
-            <Plus className="w-4 h-4" />
-            Create Event
-          </button>
-          <button
-            onClick={() => {
-              if (events.length > 0) {
-                setShowForm((prev) => ({ ...prev, event_id: String(events[0].id) }));
-              }
-              if (venues.length > 0) {
-                handleVenueChange(String(venues[0].id));
-              }
-              setShowShowModal(true);
-            }}
-            className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-lg shadow-blue-600/30 transition-all flex items-center gap-1.5"
-          >
-            <Calendar className="w-4 h-4" />
-            Schedule Show
+            <PlusCircle className="w-4 h-4" />
+            Create New Event
           </button>
         </div>
-      </div>
 
-      {/* Analytics Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-10">
-        <div className="bg-slate-900 p-6 rounded-3xl border border-slate-800 shadow-xl flex items-center justify-between">
-          <div>
-            <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Revenue</div>
-            <div className="text-2xl sm:text-3xl font-black text-emerald-400 mt-1">
-              ${analytics?.total_revenue?.toFixed(2) || '0.00'}
-            </div>
+        {actionSuccess && (
+          <div className="mb-8 p-4 rounded-2xl bg-emerald-950/80 border border-emerald-800 text-emerald-300 text-sm flex items-center gap-3 shadow-xl backdrop-blur-xl">
+            <CheckCircle className="w-5 h-5 shrink-0 text-emerald-400" />
+            <span>{actionSuccess}</span>
           </div>
-          <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
-            <DollarSign className="w-6 h-6" />
-          </div>
-        </div>
-
-        <div className="bg-slate-900 p-6 rounded-3xl border border-slate-800 shadow-xl flex items-center justify-between">
-          <div>
-            <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">Confirmed Bookings</div>
-            <div className="text-2xl sm:text-3xl font-black text-blue-400 mt-1">
-              {analytics?.total_bookings || 0}
-            </div>
-          </div>
-          <div className="w-12 h-12 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
-            <Ticket className="w-6 h-6" />
-          </div>
-        </div>
-
-        <div className="bg-slate-900 p-6 rounded-3xl border border-slate-800 shadow-xl flex items-center justify-between">
-          <div>
-            <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">Tickets Sold</div>
-            <div className="text-2xl sm:text-3xl font-black text-purple-400 mt-1">
-              {analytics?.total_tickets_sold || 0}
-            </div>
-          </div>
-          <div className="w-12 h-12 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400">
-            <Users className="w-6 h-6" />
-          </div>
-        </div>
-      </div>
-
-      {/* Events & Shows Breakdown */}
-      <div className="space-y-8">
-        <h2 className="text-xl font-bold text-white flex items-center gap-2">
-          <TrendingUp className="w-5 h-5 text-blue-400" />
-          Events & Showtimes Breakdown
-        </h2>
-
-        {(!analytics?.events || analytics.events.length === 0) ? (
-          <div className="text-center py-16 bg-slate-900/50 rounded-3xl border border-slate-800 text-slate-400">
-            No events created yet. Click "Create Event" to get started.
-          </div>
-        ) : (
-          analytics.events.map((evt) => (
-            <div key={evt.event_id} className="bg-slate-900 rounded-3xl p-6 sm:p-8 border border-slate-800 shadow-xl">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-800">
-                <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-slate-800 text-slate-300">
-                      {evt.event_type}
-                    </span>
-                  </div>
-                  <h3 className="text-xl font-black text-white">{evt.title}</h3>
-                </div>
-
-                <div className="flex items-center gap-6 text-sm">
-                  <div>
-                    <div className="text-xs text-slate-400">Revenue</div>
-                    <div className="font-bold text-emerald-400">${evt.total_revenue.toFixed(2)}</div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-slate-400">Tickets Sold</div>
-                    <div className="font-bold text-purple-400">{evt.tickets_sold}</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Showtimes Table */}
-              <div className="mt-6 overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <thead>
-                    <tr className="text-slate-400 border-b border-slate-800">
-                      <th className="pb-3 font-semibold">Showtime</th>
-                      <th className="pb-3 font-semibold">Venue</th>
-                      <th className="pb-3 font-semibold">Occupancy Rate</th>
-                      <th className="pb-3 font-semibold">Tickets Sold</th>
-                      <th className="pb-3 font-semibold">Show Revenue</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800/60">
-                    {evt.shows?.map((s) => (
-                      <tr key={s.show_id} className="text-slate-200">
-                        <td className="py-3 font-medium">
-                          {new Date(s.start_time).toLocaleString('en-US', {
-                            month: 'short',
-                            day: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
-                        </td>
-                        <td className="py-3">{s.venue_name}</td>
-                        <td className="py-3">
-                          <div className="flex items-center gap-2">
-                            <div className="w-24 bg-slate-800 h-2 rounded-full overflow-hidden">
-                              <div
-                                className="bg-blue-500 h-full rounded-full"
-                                style={{ width: `${Math.min(100, s.occupancy_rate)}%` }}
-                              ></div>
-                            </div>
-                            <span className="font-bold text-slate-300">{s.occupancy_rate}%</span>
-                          </div>
-                        </td>
-                        <td className="py-3 font-bold">{s.tickets_sold} / {s.total_seats}</td>
-                        <td className="py-3 font-bold text-emerald-400">${s.revenue.toFixed(2)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          ))
         )}
-      </div>
 
-      {/* Create Event Modal */}
-      {showEventModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-bold text-white">Create New Event</h3>
-              <button onClick={() => setShowEventModal(false)} className="text-slate-400 hover:text-white">
-                <X className="w-5 h-5" />
+        {/* Events & Shows Management List */}
+        <div>
+          <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+            <Film className="w-5 h-5 text-purple-400" />
+            Managed Events & Scheduled Showtimes
+          </h2>
+
+          {loading ? (
+            <div className="space-y-4">
+              {[1, 2].map((n) => (
+                <div key={n} className="h-48 rounded-3xl liquid-glass border border-white/10 animate-pulse"></div>
+              ))}
+            </div>
+          ) : events.length === 0 ? (
+            <div className="p-12 text-center liquid-glass rounded-3xl border border-white/10">
+              <Film className="w-12 h-12 text-slate-600 mx-auto mb-3" />
+              <h3 className="text-base font-bold text-slate-300">No events created yet</h3>
+              <p className="text-xs text-slate-500 mt-1 mb-6">Create your first movie or concert to schedule showtimes.</p>
+              <button
+                onClick={() => setShowEventModal(true)}
+                className="px-6 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs shadow-lg cursor-pointer"
+              >
+                Create Event
               </button>
             </div>
+          ) : (
+            <div className="space-y-6">
+              {events.map((evt) => (
+                <div
+                  key={evt.id}
+                  className="liquid-glass rounded-3xl p-6 sm:p-8 border border-white/10 shadow-2xl backdrop-blur-xl"
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-white/10">
+                    <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="px-2.5 py-0.5 rounded-full text-xs font-bold uppercase bg-purple-900/60 text-purple-200 border border-purple-500/30">
+                          {evt.event_type}
+                        </span>
+                        <span className="text-xs text-slate-400 font-medium">{evt.duration_minutes} mins</span>
+                      </div>
+                      <h3 className="text-xl font-bold text-white">{evt.title}</h3>
+                    </div>
 
-            <form onSubmit={handleCreateEvent} className="space-y-4 text-sm">
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Title</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Dune Part Two 70mm IMAX"
-                  value={eventForm.title}
-                  onChange={(e) => setEventForm({ ...eventForm, title: e.target.value })}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-100 focus:outline-none focus:border-purple-500"
-                />
-              </div>
+                    <button
+                      onClick={() => {
+                        setSelectedEventId(evt.id);
+                        setShowScheduleModal(true);
+                      }}
+                      className="px-4 py-2 rounded-xl liquid-glass border border-purple-500/40 hover:bg-purple-950/40 text-purple-300 font-bold text-xs flex items-center gap-1.5 self-start cursor-pointer transition-all"
+                    >
+                      <Calendar className="w-4 h-4" />
+                      Schedule Show + Pricing
+                    </button>
+                  </div>
 
-              <div className="grid grid-cols-2 gap-4">
+                  {/* Scheduled Shows Sub-list */}
+                  <div className="mt-6">
+                    <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">
+                      Scheduled Shows ({evt.shows?.length || 0})
+                    </h4>
+
+                    {(!evt.shows || evt.shows.length === 0) ? (
+                      <p className="text-xs text-slate-500 italic">No shows scheduled for this event yet.</p>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {evt.shows.map((s) => (
+                          <div key={s.id} className="p-4 rounded-2xl bg-black/40 border border-white/10">
+                            <div className="flex justify-between items-start mb-2">
+                              <div>
+                                <div className="text-xs font-bold text-slate-200">{s.venue_name}</div>
+                                <div className="text-xs text-purple-400 mt-0.5">
+                                  {new Date(s.start_time).toLocaleString()}
+                                </div>
+                              </div>
+                              <span className="text-xs font-bold text-slate-400">
+                                {s.available_seats_count} seats left
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Modal: Create Event */}
+        {showEventModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
+            <div className="liquid-glass border border-white/15 rounded-3xl max-w-lg w-full p-6 shadow-2xl backdrop-blur-2xl">
+              <h3 className="text-lg font-bold text-white mb-4">Create New Event</h3>
+              <form onSubmit={handleCreateEvent} className="space-y-4">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">Type</label>
-                  <select
-                    value={eventForm.event_type}
-                    onChange={(e) => setEventForm({ ...eventForm, event_type: e.target.value })}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-100 focus:outline-none focus:border-purple-500"
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Title</label>
+                  <input
+                    type="text"
+                    required
+                    value={eventForm.title}
+                    onChange={(e) => setEventForm({ ...eventForm, title: e.target.value })}
+                    className="w-full px-3.5 py-2 rounded-xl bg-black/60 border border-white/15 text-slate-200 text-sm focus:outline-none focus:border-purple-500"
+                    placeholder="e.g. Coldplay Live in Mumbai"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1">Event Type</label>
+                    <select
+                      value={eventForm.event_type}
+                      onChange={(e) => setEventForm({ ...eventForm, event_type: e.target.value })}
+                      className="w-full px-3.5 py-2 rounded-xl bg-black/60 border border-white/15 text-slate-200 text-sm focus:outline-none focus:border-purple-500"
+                    >
+                      <option value="MOVIE">Movie</option>
+                      <option value="CONCERT">Concert</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1">Duration (Mins)</label>
+                    <input
+                      type="number"
+                      required
+                      value={eventForm.duration_minutes}
+                      onChange={(e) => setEventForm({ ...eventForm, duration_minutes: e.target.value })}
+                      className="w-full px-3.5 py-2 rounded-xl bg-black/60 border border-white/15 text-slate-200 text-sm focus:outline-none focus:border-purple-500"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Description</label>
+                  <textarea
+                    rows={3}
+                    required
+                    value={eventForm.description}
+                    onChange={(e) => setEventForm({ ...eventForm, description: e.target.value })}
+                    className="w-full px-3.5 py-2 rounded-xl bg-black/60 border border-white/15 text-slate-200 text-sm focus:outline-none focus:border-purple-500"
+                    placeholder="Synopsis or artist line-up..."
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Banner Image URL</label>
+                  <input
+                    type="url"
+                    value={eventForm.banner_url}
+                    onChange={(e) => setEventForm({ ...eventForm, banner_url: e.target.value })}
+                    className="w-full px-3.5 py-2 rounded-xl bg-black/60 border border-white/15 text-slate-200 text-sm focus:outline-none focus:border-purple-500"
+                    placeholder="https://..."
+                  />
+                </div>
+
+                <div className="flex items-center justify-end gap-3 pt-4 border-t border-white/10">
+                  <button
+                    type="button"
+                    onClick={() => setShowEventModal(false)}
+                    className="px-4 py-2 text-xs font-semibold text-slate-400 hover:text-slate-200 cursor-pointer"
                   >
-                    <option value="MOVIE">Movie</option>
-                    <option value="CONCERT">Concert</option>
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs shadow-lg shadow-purple-600/30 cursor-pointer"
+                  >
+                    Save Event
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Modal: Schedule Show with Pricing Tiers */}
+        {showScheduleModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
+            <div className="liquid-glass border border-white/15 rounded-3xl max-w-lg w-full p-6 shadow-2xl backdrop-blur-2xl">
+              <h3 className="text-lg font-bold text-white mb-4">Schedule Show & Set Category Pricing</h3>
+              <form onSubmit={handleScheduleShow} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Select Venue</label>
+                  <select
+                    value={scheduleForm.venue_id}
+                    onChange={(e) => handleVenueChange(e.target.value)}
+                    className="w-full px-3.5 py-2 rounded-xl bg-black/60 border border-white/15 text-slate-200 text-sm focus:outline-none focus:border-purple-500"
+                  >
+                    {venues.map((v) => (
+                      <option key={v.id} value={v.id}>
+                        {v.name} ({v.city})
+                      </option>
+                    ))}
                   </select>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">Duration (Mins)</label>
-                  <input
-                    type="number"
-                    required
-                    value={eventForm.duration_minutes}
-                    onChange={(e) => setEventForm({ ...eventForm, duration_minutes: e.target.value })}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-100 focus:outline-none focus:border-purple-500"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Banner Image URL</label>
-                <input
-                  type="url"
-                  placeholder="https://images.unsplash.com/..."
-                  value={eventForm.banner_url}
-                  onChange={(e) => setEventForm({ ...eventForm, banner_url: e.target.value })}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-100 focus:outline-none focus:border-purple-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Description / Synopsis</label>
-                <textarea
-                  rows={3}
-                  value={eventForm.description}
-                  onChange={(e) => setEventForm({ ...eventForm, description: e.target.value })}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-100 focus:outline-none focus:border-purple-500"
-                ></textarea>
-              </div>
-
-              <div className="flex justify-end gap-3 pt-4 border-t border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setShowEventModal(false)}
-                  className="px-4 py-2 text-xs font-semibold text-slate-400 hover:text-slate-200"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="px-6 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs shadow-lg shadow-purple-600/30 transition-all disabled:opacity-50"
-                >
-                  {submitting ? 'Creating...' : 'Save Event'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Schedule Show Modal */}
-      {showShowModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-bold text-white">Schedule Show & Tier Pricing</h3>
-              <button onClick={() => setShowShowModal(false)} className="text-slate-400 hover:text-white">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleCreateShow} className="space-y-4 text-sm">
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Select Event</label>
-                <select
-                  value={showForm.event_id}
-                  onChange={(e) => setShowForm({ ...showForm, event_id: e.target.value })}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-100 focus:outline-none focus:border-blue-500"
-                >
-                  {events.map((e) => (
-                    <option key={e.id} value={e.id}>{e.title}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Select Venue</label>
-                <select
-                  value={showForm.venue_id}
-                  onChange={(e) => handleVenueChange(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-100 focus:outline-none focus:border-blue-500"
-                >
-                  {venues.map((v) => (
-                    <option key={v.id} value={v.id}>{v.name} ({v.city})</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">Start Time</label>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Start Date & Time</label>
                   <input
                     type="datetime-local"
                     required
-                    value={showForm.start_time}
-                    onChange={(e) => setShowForm({ ...showForm, start_time: e.target.value })}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-100 focus:outline-none focus:border-blue-500"
+                    value={scheduleForm.start_time}
+                    onChange={(e) => setScheduleForm({ ...scheduleForm, start_time: e.target.value })}
+                    className="w-full px-3.5 py-2 rounded-xl bg-black/60 border border-white/15 text-slate-200 text-sm focus:outline-none focus:border-purple-500"
                   />
                 </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">End Time</label>
-                  <input
-                    type="datetime-local"
-                    required
-                    value={showForm.end_time}
-                    onChange={(e) => setShowForm({ ...showForm, end_time: e.target.value })}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-100 focus:outline-none focus:border-blue-500"
-                  />
-                </div>
-              </div>
 
-              {/* Tier Pricing Configuration */}
-              {selectedVenueMeta && (
-                <div className="pt-3 border-t border-slate-800">
-                  <label className="block text-xs font-bold text-slate-300 mb-2">
-                    Per-Category Seat Pricing ($)
+                {/* Category Pricing Config */}
+                <div className="pt-2">
+                  <label className="block text-xs font-bold text-purple-400 uppercase tracking-wider mb-2">
+                    Venue Seat Category Pricing ($)
                   </label>
-                  <div className="space-y-2.5">
-                    {selectedVenueMeta.categories?.map((cat) => (
-                      <div key={cat.id} className="flex items-center justify-between gap-4">
-                        <span className="text-xs font-medium text-slate-300">
-                          {cat.name} (Tier {cat.tier_level}):
-                        </span>
+                  <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
+                    {selectedVenueMeta?.categories?.map((cat) => (
+                      <div key={cat.id} className="flex items-center justify-between gap-3 p-2 rounded-xl bg-black/40 border border-white/10">
+                        <span className="text-xs font-semibold text-slate-200">{cat.name} (Tier {cat.tier_level})</span>
                         <input
                           type="number"
-                          step="0.5"
-                          min="1"
+                          step="0.01"
                           required
-                          value={showForm.pricing[cat.id] || ''}
-                          onChange={(e) =>
-                            setShowForm({
-                              ...showForm,
-                              pricing: { ...showForm.pricing, [cat.id]: e.target.value },
-                            })
-                          }
-                          className="w-28 px-3 py-1.5 rounded-lg bg-slate-950 border border-slate-800 text-right font-mono font-bold text-slate-100 focus:outline-none focus:border-blue-500 text-xs"
+                          placeholder="e.g. 50.00"
+                          value={scheduleForm.tier_prices[cat.id] || ''}
+                          onChange={(e) => handlePriceChange(cat.id, e.target.value)}
+                          className="w-28 px-3 py-1.5 rounded-lg bg-black/60 border border-white/15 text-slate-100 text-xs font-bold text-right focus:outline-none focus:border-purple-500"
                         />
                       </div>
                     ))}
                   </div>
                 </div>
-              )}
 
-              <div className="flex justify-end gap-3 pt-4 border-t border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setShowShowModal(false)}
-                  className="px-4 py-2 text-xs font-semibold text-slate-400 hover:text-slate-200"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-lg shadow-blue-600/30 transition-all disabled:opacity-50"
-                >
-                  {submitting ? 'Generating Seats...' : 'Schedule & Build Inventory'}
-                </button>
-              </div>
-            </form>
+                <div className="flex items-center justify-end gap-3 pt-4 border-t border-white/10">
+                  <button
+                    type="button"
+                    onClick={() => setShowScheduleModal(false)}
+                    className="px-4 py-2 text-xs font-semibold text-slate-400 hover:text-slate-200 cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs shadow-lg shadow-purple-600/30 cursor-pointer"
+                  >
+                    Confirm & Initialize Grid
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
