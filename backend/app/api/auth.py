@@ -6,7 +6,7 @@ from sqlalchemy import select
 from backend.app.core.database import get_db
 from backend.app.core.security import verify_password, get_password_hash, create_access_token
 from backend.app.models.user import User
-from backend.app.schemas.auth import UserRegister, UserLogin, TokenResponse, UserResponse
+from backend.app.schemas.auth import UserRegister, UserLogin, FirebaseSocialLogin, TokenResponse, UserResponse
 from backend.app.api.deps import get_current_user
 
 router = APIRouter(prefix="/auth", tags=["Auth"])

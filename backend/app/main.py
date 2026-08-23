@@ -8,6 +8,7 @@ from backend.app.core.config import settings
 from backend.app.core.database import async_engine, Base, get_db
 from backend.app.workers.expiry_worker import run_expiry_cleanup_loop
 import backend.app.models  # ensure all models are registered
+from backend.app.schemas.auth import FirebaseSocialLogin
 
 # Import API routers
 from backend.app.api.auth import router as auth_router
