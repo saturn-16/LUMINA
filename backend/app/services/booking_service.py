@@ -346,9 +346,10 @@ class BookingService:
         cls, db: AsyncSession, booking_reference: str, user: User
     ) -> Dict[str, Any]:
         """Fetch single booking details by reference code."""
+        clean_ref = booking_reference.replace("#", "").strip()
         stmt = (
             select(Booking)
-            .where(Booking.booking_reference == booking_reference)
+            .where(or_(Booking.booking_reference == clean_ref, Booking.booking_reference.ilike(f"%{clean_ref}%")))
             .options(
                 joinedload(Booking.user),
                 joinedload(Booking.show).joinedload(Show.event),
@@ -362,7 +363,8 @@ class BookingService:
         if not b:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Booking not found.")
 
-        if user.role != "ADMIN" and b.user_id != user.id:
+        is_owner = (b.user_id == user.id) or (b.user and b.user.email.lower() == user.email.lower())
+        if user.role != "ADMIN" and not is_owner:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied.")
 
         seats_data = [

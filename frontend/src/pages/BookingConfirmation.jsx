@@ -39,8 +39,9 @@ export default function BookingConfirmation() {
     setResending(true);
     setResendStatus(null);
 
+    const ref = String(booking.booking_reference).replace(/^#/, '').trim();
     try {
-      const res = await api.post(`/bookings/${booking.booking_reference}/resend-email`);
+      const res = await api.post(`/bookings/${encodeURIComponent(ref)}/resend-email`);
       setResendStatus({
         success: true,
         message: res.data?.message || `Confirmation email dispatched to ${user?.email || 'your registered Gmail ID'}!`,
