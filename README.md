@@ -22,18 +22,19 @@
 - [Why LUMINA Exists](#-why-lumina-exists)
 - [System Architecture](#-system-architecture)
 - [Key Features](#-key-features)
-- [Deep Dive: Concurrency & Atomicity Engine](#-deep-dive-concurrency--atomicity-engine)
+- [Seat Hold & Waitlist Logic Explanation](#-seat-hold--waitlist-logic-explanation)
 - [FIFO Waitlist & Cancellation Reallocation Flow](#-fifo-waitlist--cancellation-reallocation-flow)
 - [Role-Based Access Control (RBAC)](#-role-based-access-control-rbac)
 - [Database Schema (ERD)](#-database-schema-erd)
 - [Tech Stack](#-tech-stack)
-- [Getting Started](#-getting-started)
+- [Setup Guide](#-setup-guide)
   - [Prerequisites](#prerequisites)
-  - [Backend Setup](#1-backend-setup)
-  - [Frontend Setup](#2-frontend-setup)
-  - [Environment Variables](#environment-variables-reference)
+  - [1. Backend Setup](#1-backend-setup)
+  - [2. Frontend Setup](#2-frontend-setup)
+  - [3. Running Both Services Together Locally](#3-running-both-services-together-locally)
+- [Environment Variables (.env.example)](#-environment-variables-envexample)
 - [Automated Testing Suite](#-automated-testing-suite)
-- [API Reference](#-api-reference)
+- [API Documentation](#-api-documentation)
 - [Deployment Topology](#-deployment-topology)
 - [Repository Structure](#-repository-structure)
 - [Roadmap](#-roadmap)
@@ -139,15 +140,32 @@ graph TD
 
 ---
 
-## 🔬 Deep Dive: Concurrency & Atomicity Engine
+## 🔬 Seat Hold & Waitlist Logic Explanation
 
-### The Problem: Why Naive Approaches Fail Under Load
-- **Optimistic Locking (`version` columns)**: Under high contention (e.g., 200 users clicking seat `A-1` at `00:00:01`), 199 requests fail after full round-trip execution, creating massive database CPU churn and terrible user experience.
-- **Application-Level Mutexes (Python `asyncio.Lock`)**: Fails completely in horizontally scaled environments with multiple worker processes (`uvicorn --workers 4`) or multi-instance containers, because locks are not shared across processes.
-- **Distributed Redis Locks (Redlock)**: Adds operational complexity, network latency hops, and dual-state synchronization failure modes between cache and SQL store.
+### 1. Full Seat Lifecycle State Machine
 
-### The LUMINA Solution: Pessimistic Row-Level Database Locking
-LUMINA uses **database-native row-level pessimistic locking** (`SELECT ... FOR UPDATE`) within isolated async transactions. The database engine itself serializes contending requests at the disk/page row level.
+```
+[ AVAILABLE ] ──(Customer clicks 'Hold Seats')──> [ HELD ]
+     ▲                                                │
+     │                                                ├──(Checkout confirmed)──> [ BOOKED ]
+     │                                                │
+     └──(Hold expired > 600s / Abandoned)─────────────┴──(Cancelled)──> [ WAITLIST CLAIM OFFER ]
+                                                                                │
+                                                                                ├──(Claimed < 600s)──> [ BOOKED ]
+                                                                                └──(Lapsed > 600s)───> [ Escalate to Next / AVAILABLE ]
+```
+
+When a customer selects seats for a show, the backend does not immediately book them — it places a **temporary hold**. Each hold is represented by a `SeatHolds` row containing `show_seat_id`, `user_id`, a unique `hold_token`, an `expires_at` timestamp set to `now() + 600s`, and a `status` field (`ACTIVE`, `EXPIRED`, `CONVERTED`). The corresponding `ShowSeats.status` transitions from `AVAILABLE` to `HELD` in the same transaction.
+
+This TTL model exists because ticketing systems must reserve inventory long enough for a user to complete payment, without letting abandoned carts permanently lock out real demand. Ten minutes balances checkout friction against seat starvation.
+
+Expiry is enforced by an **asynchronous background worker** (`run_expiry_cleanup_loop`) that runs on a **15-second cycle**. It queries for holds where `expires_at < now()` and `status = ACTIVE`, flips them to `EXPIRED`, reverts the associated `ShowSeats.status` back to `AVAILABLE` (or triggers waitlist reallocation), and broadcasts a `SEATS_RELEASED` event over WebSockets so every connected client's seat map updates instantly, with zero polling and zero page refresh.
+
+### 2. Concurrency Prevention & Lock Acquisition
+
+The core failure mode LUMINA is designed against is **double-booking**: two users clicking the same seat within milliseconds of each other during a high-demand drop. A naive read-then-write pattern (check `status == AVAILABLE`, then update) is unsafe under concurrency — both requests can pass the check before either commits, resulting in two confirmed holds on one seat.
+
+LUMINA solves this with **pessimistic row-level locking** at the database layer:
 
 ```python
 # backend/app/services/seat_service.py
@@ -221,6 +239,15 @@ async def create_seat_hold(
     )
     return {"hold_token": hold_token, "expires_at": expires_at.isoformat()}
 ```
+
+`with_for_update()` acquires an exclusive row lock the instant the seat row is read inside a transaction. Any second transaction attempting to select the same row for update is forced to block until the first transaction commits or rolls back. Once the first transaction commits the seat as `HELD`, the second transaction re-reads the now-updated state and correctly finds the seat unavailable, returning **HTTP 409 Conflict** to the losing client.
+
+This approach was chosen over alternatives for concrete reasons:
+- **Optimistic locking** (version-column compare-and-swap) would work but forces the losing client to retry blindly against a rapidly changing seat map — poor UX during a surge, and wasteful under high contention.
+- **Application-level mutexes** (e.g., an in-memory lock) fail the moment the API is horizontally scaled across multiple processes or containers, since locks wouldn't be shared across instances.
+- **Database-level pessimistic locking** is correct by construction, requires no coordination service, and scales naturally with PostgreSQL's own transaction isolation — the tradeoff is that it's optimized for short-lived critical sections, which the seat-hold transaction is.
+
+The lock is held only for the duration of the status-check-and-flip transaction (milliseconds), not for the full 10-minute hold window, so contention windows stay small even under load.
 
 ---
 
@@ -439,106 +466,100 @@ erDiagram
 
 ---
 
-## 🚀 Getting Started
+## 🚀 Setup Guide
 
 ### Prerequisites
 - **Python**: `>= 3.11`
 - **Node.js**: `>= 18.0.0` & **npm**: `>= 9.0.0`
 - **Git**
 
+---
+
 ### 1. Backend Setup
 
 ```bash
-# Clone the repository
+# 1. Clone the repository and navigate into the root directory
 git clone https://github.com/saturn-16/LUMINA.git
 cd LUMINA
 
-# Create and activate virtual environment
+# 2. Create and activate a Python virtual environment
 python -m venv .venv
 
 # On Linux/macOS:
 source .venv/bin/activate
-# On Windows:
-.venv\Scripts\activate
+# On Windows (PowerShell):
+.venv\Scripts\Activate.ps1
 
-# Install dependencies
+# 3. Install backend dependencies
 pip install -r backend/requirements.txt
 
-# Create local environment configuration
+# 4. Configure environment variables
 cp .env.example .env
 
-# Run database migrations and seed realistic demo catalogue
+# 5. Initialize database tables and seed demo catalogue
 python -m backend.seed_data
 
-# Start FastAPI ASGI server
+# 6. Start the FastAPI development server
 uvicorn backend.app.main:app --reload --host 0.0.0.0 --port 8000
 ```
-Backend API will be live at `http://localhost:8000`. Interactive Swagger UI available at `http://localhost:8000/docs`.
+Backend API will be live at `http://localhost:8000`. Interactive Swagger UI documentation is available at `http://localhost:8000/docs`.
 
 ---
 
 ### 2. Frontend Setup
 
 ```bash
-# In a new terminal window, navigate to frontend directory
-cd frontend
+# 1. Open a new terminal window and navigate to the frontend directory
+cd LUMINA/frontend
 
-# Install dependencies
+# 2. Install client dependencies
 npm install
 
-# Start Vite development server
+# 3. Configure frontend environment variables
+cp .env.example .env
+
+# 4. Start the Vite development server
 npm run dev
 ```
 Client application will be running at `http://localhost:5173`.
 
 ---
 
-### Environment Variables Reference
+### 3. Running Both Services Together Locally
 
-#### Backend Configuration (`.env`)
-```ini
-# Application
-PROJECT_NAME="Lumina Live Experiences"
-SECRET_KEY="your-secure-random-secret-key-min-32-chars"
-ALGORITHM="HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES=1440
+1. **Terminal 1 (Backend API & WebSocket Server)**:
+   ```bash
+   uvicorn backend.app.main:app --reload --port 8000
+   ```
+2. **Terminal 2 (Frontend Client)**:
+   ```bash
+   cd frontend && npm run dev
+   ```
+3. Open `http://localhost:5173` in your browser. The client will communicate with the backend at `http://localhost:8000` and establish persistent WebSockets at `ws://localhost:8000/ws/shows/{id}`.
 
-# Database Connection (PostgreSQL for production, SQLite for local dev)
-DATABASE_URL="sqlite+aiosqlite:///./ticket_booking.db"
-SYNC_DATABASE_URL="sqlite:///./ticket_booking.db"
+---
 
-# Business Logic TTL (Seconds)
-HOLD_TTL_SECONDS=600               # 10-minute temporary seat hold
-WAITLIST_OFFER_TTL_SECONDS=600      # 10-minute waitlist claim window
-EXPIRY_CLEANUP_INTERVAL_SECONDS=15 # Background reconciliation tick
+## 🔐 Environment Variables (.env.example)
 
-# CORS & Client Origins
-CORS_ORIGINS="http://localhost:5173,http://localhost:3000,https://lumina-woad-eta.vercel.app"
-FRONTEND_URL="https://lumina-woad-eta.vercel.app"
-
-# Email Delivery (Resend API)
-RESEND_API_KEY="re_your_api_key_here"
-RESEND_FROM_EMAIL="Lumina Tickets <onboarding@resend.dev>"
-
-# Optional SMTP Fallback (Gmail / Brevo)
-SMTP_HOST="smtp.gmail.com"
-SMTP_PORT=587
-SMTP_TLS=True
-SMTP_USER=""
-SMTP_PASSWORD=""
-```
-
-#### Frontend Configuration (`frontend/.env`)
+### Frontend Configuration (`frontend/.env`)
 ```ini
 VITE_API_URL="https://lumina-16hr.onrender.com"
-
-# Firebase Client Authentication
 VITE_FIREBASE_API_KEY="your-firebase-api-key"
 VITE_FIREBASE_AUTH_DOMAIN="your-app.firebaseapp.com"
 VITE_FIREBASE_PROJECT_ID="your-project-id"
-VITE_FIREBASE_STORAGE_BUCKET="your-app.firebasestorage.app"
-VITE_FIREBASE_MESSAGING_SENDER_ID="your-sender-id"
-VITE_FIREBASE_APP_ID="your-app-id"
+```
+
+### Backend Configuration (`.env`)
+```ini
+DATABASE_URL="sqlite+aiosqlite:///./ticket_booking.db"
+SECRET_KEY="your-secure-random-secret-key-min-32-chars"
+RESEND_API_KEY="re_your_api_key_here"
+HOLD_TTL_SECONDS=600
+WAITLIST_OFFER_TTL_SECONDS=600
+SMTP_HOST="smtp.gmail.com"
+SMTP_PORT=587
+SMTP_USER="your-email@gmail.com"
+SMTP_PASS="your-smtp-app-password"
 ```
 
 ---
@@ -563,18 +584,18 @@ The concurrency test (`test_concurrency.py`) spawns parallel asynchronous client
 
 ---
 
-## 📡 API Reference
+## 📡 API Documentation
 
 | Method | Endpoint | Description | Access |
 | :--- | :--- | :--- | :--- |
-| `POST` | `/api/auth/register` | Register customer, organiser, or admin | Public |
-| `POST` | `/api/auth/login` | Authenticate with email & password for JWT | Public |
+| `POST` | `/api/auth/register` | Register customer, organiser, or admin account | Public |
+| `POST` | `/api/auth/login` | Authenticate with email & password for JWT session | Public |
 | `POST` | `/api/auth/firebase-login` | Synchronize & provision Firebase Google accounts | Public |
 | `GET` | `/api/events` | Browse and filter active live experiences | Public |
 | `GET` | `/api/events/{id}` | Retrieve event details and scheduled showtimes | Public |
 | `GET` | `/api/shows/{id}/seats` | Real-time seat map grid with dynamic statuses | Public |
-| `POST` | `/api/holds` | Acquire atomic 10-minute hold on seats (`TTL`) | `CUSTOMER` |
-| `POST` | `/api/holds/release` | Explicitly release active hold back to available | `CUSTOMER` |
+| `POST` | `/api/shows/{id}/seats/hold` | Acquire atomic 10-minute hold on seats (`TTL`) | `CUSTOMER` |
+| `POST` | `/api/holds/release` | Explicitly release active seat hold back to available | `CUSTOMER` |
 | `POST` | `/api/bookings/confirm` | Finalize booking and dispatch QR ticket email | `CUSTOMER` |
 | `GET` | `/api/bookings/my` | List authenticated user's digital ticket wallet | `CUSTOMER` |
 | `POST` | `/api/bookings/{ref}/resend-email` | Re-dispatch ticket passcard and QR code to inbox | `CUSTOMER` / `ADMIN` |
@@ -586,6 +607,8 @@ The concurrency test (`test_concurrency.py`) spawns parallel asynchronous client
 | `GET` | `/api/organiser/analytics` | View revenue, tickets sold, and capacity rates | `ORGANISER` / `ADMIN` |
 | `GET` | `/api/test-email` | Live transactional email pipeline diagnostics | Public / Admin |
 | `WS` | `/ws/shows/{id}` | Real-time seat status WebSocket stream | Public |
+
+> 📖 **Full interactive documentation and testing sandbox is auto-generated via Swagger UI at `/docs` (or `https://lumina-16hr.onrender.com/docs`).**
 
 ---
 
@@ -659,6 +682,9 @@ LUMINA/
 │   ├── package.json
 │   ├── tailwind.config.js
 │   └── vite.config.js
+├── docs/
+│   ├── system-design.md     # In-depth system design & concurrency specifications
+│   └── database-schema.md   # ER diagram and relational schemas
 ├── vercel.json              # Vercel SPA routing rewrite rules
 ├── pytest.ini               # Pytest async configuration
 ├── .env.example             # Documented environment template
