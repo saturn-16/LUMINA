@@ -63,31 +63,31 @@ When high-demand events (e.g., stadium concert tours, film festival premieres) g
 ```mermaid
 graph TD
     subgraph Client ["Client Layer (React 18 + Vite SPA)"]
-        UI[Customer / Organiser / Admin Portals]
-        WS_Client[WebSocket Real-Time Listener]
-        Auth_Client[Firebase Google Auth + JWT State]
+        UI["Customer / Organiser / Admin Portals"]
+        WS_Client["WebSocket Real-Time Listener"]
+        Auth_Client["Firebase Google Auth + JWT State"]
     end
 
     subgraph CDN ["Edge & Routing"]
-        Vercel[Vercel Edge Global CDN]
+        Vercel["Vercel Edge Global CDN"]
     end
 
     subgraph Backend ["Application Layer (FastAPI ASGI Engine)"]
-        API[RESTful Endpoints & RBAC Guards]
-        WS_Manager[WebSocket Connection Hub]
-        Worker[Async Background Expiry Worker (15s Tick)]
-        QR_Engine[Server-Side QR Generator]
+        API["RESTful Endpoints & RBAC Guards"]
+        WS_Manager["WebSocket Connection Hub"]
+        Worker["Async Background Expiry Worker (15s Tick)"]
+        QR_Engine["Server-Side QR Generator"]
     end
 
     subgraph Concurrency ["Transactional Data Layer (SQLAlchemy 2.0 AsyncIO)"]
-        DB[(PostgreSQL / Async AioSQLite)]
+        DB[("PostgreSQL / Async AioSQLite")]
         PessimisticLock["SELECT ... FOR UPDATE Row Locks"]
     end
 
     subgraph External ["Third-Party Delivery & Auth"]
-        FirebaseAuth[Firebase Authentication]
-        ResendAPI[Resend HTTPS Email API]
-        UniversalCDN[QR Image Delivery CDN]
+        FirebaseAuth["Firebase Authentication"]
+        ResendAPI["Resend HTTPS Email API"]
+        UniversalCDN["QR Image Delivery CDN"]
     end
 
     Vercel --> UI
@@ -231,11 +231,11 @@ When high-demand tickets are cancelled, LUMINA executes an automated fair-reallo
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Customer_A as Customer A (Holding Booking)
+    actor Customer_A as Customer A
     participant API as FastAPI Backend Engine
     participant DB as Relational Database
     participant Worker as Expiry Background Worker
-    actor Waitlist_User as Next Fan in Queue (Pos: 1)
+    actor Waitlist_User as Next Waitlisted Customer
     participant Email as Resend Email Service
 
     Customer_A ->> API: POST /api/bookings/{id}/cancel
