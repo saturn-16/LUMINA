@@ -29,7 +29,8 @@ class Settings(BaseSettings):
     # Frontend URL
     FRONTEND_URL: str = "http://localhost:5173"
     
-    # Email settings (SMTP)
+    # Email settings (Resend API or SMTP)
+    RESEND_API_KEY: str = ""
     SMTP_HOST: str = ""
     SMTP_PORT: int = 587
     SMTP_USER: str = ""

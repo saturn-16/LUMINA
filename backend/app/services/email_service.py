@@ -43,7 +43,7 @@ class EmailService:
             logger.warning(f"Could not save local email preview: {err}")
 
         # Check for Resend API delivery first (modern, free 3,000 emails/mo)
-        resend_api_key = os.getenv("RESEND_API_KEY", "")
+        resend_api_key = (getattr(settings, "RESEND_API_KEY", "") or os.getenv("RESEND_API_KEY", "")).strip()
         smtp_from_name = settings.SMTP_FROM_NAME or os.getenv("SMTP_FROM_NAME", "Lumina Live Experiences")
         
         if resend_api_key:
