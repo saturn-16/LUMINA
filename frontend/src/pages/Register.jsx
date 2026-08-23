@@ -13,7 +13,7 @@ export default function Register() {
     full_name: '',
     role: 'CUSTOMER',
   });
-  const [rememberMe, setRememberMe] = useState(true);
+  const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
@@ -44,7 +44,7 @@ export default function Register() {
     setError(null);
     setGoogleLoading(true);
     try {
-      const u = await loginWithGoogle(formData.role || 'CUSTOMER');
+      const u = await loginWithGoogle(formData.role || 'CUSTOMER', rememberMe);
       if (u.role === 'ADMIN') navigate('/admin', { replace: true });
       else if (u.role === 'ORGANISER') navigate('/organiser', { replace: true });
       else navigate('/dashboard', { replace: true });

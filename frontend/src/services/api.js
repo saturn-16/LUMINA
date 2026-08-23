@@ -18,9 +18,9 @@ const api = axios.create({
   },
 });
 
-// Attach JWT token automatically
+// Attach JWT token automatically (session-first)
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
+  const token = sessionStorage.getItem('token') || localStorage.getItem('token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -32,11 +32,15 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response && error.response.status === 401) {
-      // If unauthorized and on protected page, clear token
+      // If unauthorized and on protected page, clear auth tokens
       const isAuthUrl = error.config.url.includes('/auth/login') || error.config.url.includes('/auth/register');
       if (!isAuthUrl) {
+        sessionStorage.removeItem('token');
+        sessionStorage.removeItem('lumina_user');
+        sessionStorage.removeItem('lumina_last_activity');
         localStorage.removeItem('token');
-        localStorage.removeItem('user');
+        localStorage.removeItem('lumina_user');
+        localStorage.removeItem('lumina_last_activity');
       }
     }
     return Promise.reject(error);

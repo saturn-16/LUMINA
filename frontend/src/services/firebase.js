@@ -1,6 +1,9 @@
 import { initializeApp, getApps, getApp } from '@firebase/app';
 import {
   getAuth,
+  setPersistence,
+  browserSessionPersistence,
+  browserLocalPersistence,
   GoogleAuthProvider,
   signInWithPopup,
   signInWithEmailAndPassword,
@@ -27,6 +30,14 @@ const app = isConfigured
   : (getApps().length === 0 ? initializeApp({ apiKey: "AIzaSyPlaceholderKeyForBuild123456789" }) : getApp());
 
 const auth = getAuth(app);
+
+// Enforce session-only persistence so closing the tab/window logs the user out
+if (typeof window !== 'undefined' && auth) {
+  setPersistence(auth, browserSessionPersistence).catch((err) => {
+    console.warn('Firebase session persistence configuration:', err);
+  });
+}
+
 const googleProvider = new GoogleAuthProvider();
 
 export const isFirebaseConfigured = isConfigured;
@@ -34,6 +45,9 @@ export const isFirebaseConfigured = isConfigured;
 export {
   auth,
   googleProvider,
+  setPersistence,
+  browserSessionPersistence,
+  browserLocalPersistence,
   signInWithPopup,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,

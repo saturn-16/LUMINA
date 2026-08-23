@@ -9,7 +9,7 @@ import { Lock, Mail, AlertCircle, ArrowRight, CheckSquare, Square, Sparkles } fr
 export default function Login() {
   const [email, setEmail] = useState(() => localStorage.getItem('lumina_saved_email') || '');
   const [password, setPassword] = useState(() => localStorage.getItem('lumina_saved_password') || '');
-  const [rememberMe, setRememberMe] = useState(() => localStorage.getItem('lumina_remember_me') !== 'false');
+  const [rememberMe, setRememberMe] = useState(() => localStorage.getItem('lumina_remember_me') === 'true');
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
@@ -30,7 +30,7 @@ export default function Login() {
       if (!rememberMe) {
         localStorage.removeItem('lumina_saved_email');
         localStorage.removeItem('lumina_saved_password');
-        localStorage.setItem('lumina_remember_me', 'false');
+        localStorage.removeItem('lumina_remember_me');
       }
       if (u.role === 'ADMIN' && from === '/dashboard') navigate('/admin', { replace: true });
       else if (u.role === 'ORGANISER' && from === '/dashboard') navigate('/organiser', { replace: true });
@@ -48,7 +48,7 @@ export default function Login() {
     setError(null);
     setGoogleLoading(true);
     try {
-      const u = await loginWithGoogle('CUSTOMER');
+      const u = await loginWithGoogle('CUSTOMER', rememberMe);
       if (u.role === 'ADMIN') navigate('/admin', { replace: true });
       else if (u.role === 'ORGANISER') navigate('/organiser', { replace: true });
       else navigate(from || '/dashboard', { replace: true });
