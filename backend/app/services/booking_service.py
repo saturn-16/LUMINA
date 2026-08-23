@@ -343,7 +343,7 @@ class BookingService:
 
     @classmethod
     async def get_booking_by_reference(
-        cls, db: AsyncSession, booking_reference: str, user: User
+        cls, db: AsyncSession, booking_reference: str, user: Optional[User] = None
     ) -> Dict[str, Any]:
         """Fetch single booking details by reference code."""
         clean_ref = booking_reference.replace("#", "").strip()
@@ -363,9 +363,10 @@ class BookingService:
         if not b:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Booking not found.")
 
-        is_owner = (b.user_id == user.id) or (b.user and b.user.email.lower() == user.email.lower())
-        if user.role != "ADMIN" and not is_owner:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied.")
+        if user and user.role != "ADMIN":
+            is_owner = (b.user_id == user.id) or (b.user and b.user.email.lower() == user.email.lower())
+            if not is_owner:
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied.")
 
         seats_data = [
             {
@@ -402,7 +403,7 @@ class BookingService:
 
     @classmethod
     async def resend_booking_confirmation(
-        cls, db: AsyncSession, booking_reference: str, user: User
+        cls, db: AsyncSession, booking_reference: str, user: Optional[User] = None
     ) -> Dict[str, Any]:
         """Resend booking confirmation ticket email with QR code to the registered email."""
         booking_data = await cls.get_booking_by_reference(db, booking_reference, user)

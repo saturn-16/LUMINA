@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -11,7 +11,7 @@ from backend.app.schemas.booking import (
     BookingCancelResponse,
 )
 from backend.app.services.booking_service import BookingService
-from backend.app.api.deps import get_current_user
+from backend.app.api.deps import get_current_user, get_current_user_optional
 
 router = APIRouter(prefix="/bookings", tags=["Bookings"])
 
@@ -64,7 +64,7 @@ async def get_booking_details(
 @router.post("/{booking_reference}/resend-email")
 async def resend_booking_email(
     booking_reference: str,
-    current_user: User = Depends(get_current_user),
+    current_user: Optional[User] = Depends(get_current_user_optional),
     db: AsyncSession = Depends(get_db),
 ):
     """Resend the official booking confirmation and admission QR passcard to registered email."""
