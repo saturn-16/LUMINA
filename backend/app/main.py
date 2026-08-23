@@ -93,6 +93,13 @@ async def health_check():
     return {"status": "healthy", "project": settings.PROJECT_NAME}
 
 
+@app.get("/api/test-email", tags=["Health"])
+@app.get("/test-email", tags=["Health"])
+async def trigger_test_email(to: str = "gk16122004@gmail.com"):
+    from backend.app.services.email_service import EmailService
+    return EmailService.test_email_delivery(to_email=to.strip())
+
+
 @app.post("/api/firebase-login", tags=["Auth"])
 @app.post("/firebase-login", tags=["Auth"])
 async def root_firebase_login(payload: FirebaseSocialLogin, db: AsyncSession = Depends(get_db)):

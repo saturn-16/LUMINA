@@ -50,6 +50,7 @@ class EmailService:
             try:
                 import json
                 import urllib.request
+                import urllib.error
 
                 from_sender = os.getenv("RESEND_FROM_EMAIL", "Lumina Tickets <onboarding@resend.dev>")
                 resend_payload = {
@@ -70,7 +71,13 @@ class EmailService:
                 logger.info(f"✓ Real ticket passcard delivered via Resend API to: {to_email} (HTTP {res.status})")
                 return
             except Exception as e:
-                logger.error(f"Resend delivery attempt error: {e}. Falling back to SMTP...")
+                err_info = str(e)
+                if hasattr(e, "read"):
+                    try:
+                        err_info += f" -> {e.read().decode('utf-8')}"
+                    except Exception:
+                        pass
+                logger.error(f"Resend delivery attempt failed: {err_info}. Checking SMTP fallback...")
 
         # Check if SMTP (e.g. Gmail) is configured
         smtp_host = settings.SMTP_HOST or os.getenv("SMTP_HOST", "")
@@ -425,3 +432,88 @@ class EmailService:
 </body>
 </html>"""
         cls._send_async(to_email=to_email, subject=subject, html_content=html_content)
+
+    @classmethod
+    def test_email_delivery(cls, to_email: str) -> Dict[str, Any]:
+        """Test delivery pipeline synchronously and return granular diagnostic info."""
+        resend_api_key = (getattr(settings, "RESEND_API_KEY", "") or os.getenv("RESEND_API_KEY", "")).strip()
+        smtp_host = settings.SMTP_HOST or os.getenv("SMTP_HOST", "")
+        smtp_user = settings.SMTP_USER or os.getenv("SMTP_USER", "")
+        smtp_password = settings.SMTP_PASSWORD or os.getenv("SMTP_PASSWORD", "")
+
+        diagnostics = {
+            "target_email": to_email,
+            "resend_api_key_configured": bool(resend_api_key),
+            "resend_key_preview": (resend_api_key[:6] + "..." + resend_api_key[-4:]) if len(resend_api_key) > 10 else ("Configured" if resend_api_key else "Missing"),
+            "smtp_configured": bool(smtp_host and smtp_user and smtp_password),
+            "smtp_host": smtp_host or "None",
+            "provider_used": None,
+            "status": "NOT_CONFIGURED",
+            "message": "",
+        }
+
+        if resend_api_key:
+            try:
+                import json
+                import urllib.request
+                import urllib.error
+
+                from_sender = os.getenv("RESEND_FROM_EMAIL", "Lumina Tickets <onboarding@resend.dev>")
+                resend_payload = {
+                    "from": from_sender,
+                    "to": [to_email],
+                    "subject": "⚡ Lumina Ticket Engine Test Email",
+                    "html": "<h3>Lumina Ticket Engine Test Email</h3><p>Your Resend API configuration is verified and working!</p>",
+                }
+                req = urllib.request.Request(
+                    "https://api.resend.com/emails",
+                    data=json.dumps(resend_payload).encode("utf-8"),
+                    headers={
+                        "Authorization": f"Bearer {resend_api_key}",
+                        "Content-Type": "application/json",
+                    },
+                )
+                res = urllib.request.urlopen(req, timeout=10)
+                body = res.read().decode("utf-8")
+                diagnostics["provider_used"] = "RESEND"
+                diagnostics["status"] = "SUCCESS"
+                diagnostics["message"] = f"Delivered successfully via Resend API (HTTP {res.status}): {body}"
+                return diagnostics
+            except urllib.error.HTTPError as he:
+                error_body = he.read().decode("utf-8") if hasattr(he, "read") else str(he)
+                diagnostics["provider_used"] = "RESEND"
+                diagnostics["status"] = "ERROR"
+                diagnostics["message"] = f"Resend API error HTTP {he.code}: {error_body}"
+                return diagnostics
+            except Exception as e:
+                diagnostics["provider_used"] = "RESEND"
+                diagnostics["status"] = "ERROR"
+                diagnostics["message"] = f"Resend connection failed: {str(e)}"
+                return diagnostics
+
+        if smtp_host and smtp_user and smtp_password:
+            try:
+                msg = MIMEText("<p>Lumina SMTP Test Email</p>", "html")
+                msg["Subject"] = "⚡ Lumina SMTP Test Email"
+                msg["From"] = smtp_user
+                msg["To"] = to_email
+
+                server = smtplib.SMTP(smtp_host, int(settings.SMTP_PORT or 587), timeout=12)
+                if settings.SMTP_TLS:
+                    server.starttls()
+                server.login(smtp_user, smtp_password)
+                server.sendmail(smtp_user, [to_email], msg.as_string())
+                server.quit()
+
+                diagnostics["provider_used"] = "SMTP"
+                diagnostics["status"] = "SUCCESS"
+                diagnostics["message"] = f"Delivered successfully via SMTP {smtp_host}"
+                return diagnostics
+            except Exception as e:
+                diagnostics["provider_used"] = "SMTP"
+                diagnostics["status"] = "ERROR"
+                diagnostics["message"] = f"SMTP connection error: {str(e)}"
+                return diagnostics
+
+        diagnostics["message"] = "No email credentials found. Add RESEND_API_KEY in Render Environment Variables."
+        return diagnostics
