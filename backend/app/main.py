@@ -100,6 +100,14 @@ async def trigger_test_email(to: str = "gk16122004@gmail.com"):
     return EmailService.test_email_delivery(to_email=to.strip())
 
 
+@app.get("/api/admin/reseed", tags=["Admin"])
+@app.post("/api/admin/reseed", tags=["Admin"])
+async def trigger_reseed():
+    from backend.seed_data import seed_database
+    await seed_database()
+    return {"status": "SUCCESS", "message": "Database successfully reseeded with authentic images and prime-time show slots!"}
+
+
 @app.post("/api/firebase-login", tags=["Auth"])
 @app.post("/firebase-login", tags=["Auth"])
 async def root_firebase_login(payload: FirebaseSocialLogin, db: AsyncSession = Depends(get_db)):

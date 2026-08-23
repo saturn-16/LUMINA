@@ -345,10 +345,10 @@ async def seed_database():
             {
                 "title": "Zakir Khan Live: Tathastu & New Specials",
                 "type": "THEATRE",
-                "city_venue": "South City INOX Luxe",
+                "city_venue": "NCPA Tata Theatre",
                 "duration": 90,
-                "banner": "https://images.unsplash.com/photo-1585699324551-f6c309eedeca?w=1200&auto=format&fit=crop&q=80",
-                "desc": "The 'Sakht Launda' returns with his signature heartwarming humor, relatable storytelling, and sharp comedic observations.",
+                "banner": "https://images.unsplash.com/photo-1527224857830-43a7acc85260?w=1200&auto=format&fit=crop&q=80",
+                "desc": "The 'Sakht Launda' returns with his signature heartwarming humor, relatable storytelling, and sharp comedic observations in a grand live auditorium.",
                 "prices": [499.0, 899.0, 1499.0],
             },
 
@@ -367,17 +367,17 @@ async def seed_database():
                 "type": "SPORTS",
                 "city_venue": "Kochi Marine Drive Arena",
                 "duration": 120,
-                "banner": "https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=1200&auto=format&fit=crop&q=80",
-                "desc": "Electric football fever! Watch India's top football clubs battle for the prestigious championship trophy.",
+                "banner": "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=1200&auto=format&fit=crop&q=80",
+                "desc": "Electric football championship fever! Watch India's top football clubs battle for the prestigious championship trophy under stadium floodlights.",
                 "prices": [299.0, 699.0, 1499.0],
             },
             {
                 "title": "Pro Kabaddi League: All-Stars Mega Clash",
                 "type": "SPORTS",
-                "city_venue": "Sathyam Cinemas IMAX",
+                "city_venue": "Jawaharlal Nehru Stadium",
                 "duration": 90,
-                "banner": "https://images.unsplash.com/photo-1579952363873-27f3bade9f55?w=1200&auto=format&fit=crop&q=80",
-                "desc": "Fast-paced raids, bone-crushing tackles, and pure athletic intensity in this high-stakes league clash.",
+                "banner": "https://images.unsplash.com/photo-1517649763962-0c623266ddc0?w=1200&auto=format&fit=crop&q=80",
+                "desc": "Fast-paced raids, bone-crushing tackles, and pure athletic intensity in this high-stakes indoor stadium championship clash.",
                 "prices": [249.0, 499.0, 999.0],
             },
         ]
@@ -402,9 +402,39 @@ async def seed_database():
             cats = venue_info["categories"]
             seats = venue_info["seats"]
 
-            # Schedule 2 upcoming showtimes for each event (e.g. today, tomorrow, next week)
+            # Schedule clean, prime-time show slots for each event
+            event_type = ed["type"]
             for s_idx in range(2):
-                show_start = now + timedelta(days=1 + (i % 7) + (s_idx * 3), hours=14 + (s_idx * 4))
+                target_date = now + timedelta(days=1 + (i % 5) + (s_idx * 2))
+
+                if event_type == "MOVIE":
+                    # Matinee (3:30 PM) or Prime Evening (7:15 PM)
+                    slot_hour = 15 if s_idx == 0 else 19
+                    slot_min = 30 if s_idx == 0 else 15
+                elif event_type == "CONCERT":
+                    # Concert Prime Slots: 7:00 PM or 8:00 PM
+                    slot_hour = 19 if s_idx == 0 else 20
+                    slot_min = 0
+                elif event_type == "SPORTS":
+                    # Afternoon (4:00 PM) or Night Match (7:30 PM)
+                    slot_hour = 16 if s_idx == 0 else 19
+                    slot_min = 0 if s_idx == 0 else 30
+                else:  # THEATRE / STANDUP COMEDY
+                    # Evening (6:30 PM) or Late Evening (8:30 PM)
+                    slot_hour = 18 if s_idx == 0 else 20
+                    slot_min = 30
+
+                show_start = datetime(
+                    year=target_date.year,
+                    month=target_date.month,
+                    day=target_date.day,
+                    hour=slot_hour,
+                    minute=slot_min,
+                    second=0,
+                    microsecond=0,
+                    tzinfo=timezone.utc,
+                )
+
                 show = Show(
                     event_id=event.id,
                     venue_id=venue_obj.id,
