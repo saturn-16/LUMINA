@@ -42,21 +42,51 @@ class EmailService:
         except Exception as err:
             logger.warning(f"Could not save local email preview: {err}")
 
-        # Check if SMTP is configured
+        # Check for Resend API delivery first (modern, free 3,000 emails/mo)
+        resend_api_key = os.getenv("RESEND_API_KEY", "")
+        smtp_from_name = settings.SMTP_FROM_NAME or os.getenv("SMTP_FROM_NAME", "Lumina Live Experiences")
+        
+        if resend_api_key:
+            try:
+                import json
+                import urllib.request
+
+                from_sender = os.getenv("RESEND_FROM_EMAIL", "Lumina Tickets <onboarding@resend.dev>")
+                resend_payload = {
+                    "from": from_sender,
+                    "to": [to_email],
+                    "subject": subject,
+                    "html": html_content,
+                }
+                req = urllib.request.Request(
+                    "https://api.resend.com/emails",
+                    data=json.dumps(resend_payload).encode("utf-8"),
+                    headers={
+                        "Authorization": f"Bearer {resend_api_key}",
+                        "Content-Type": "application/json",
+                    },
+                )
+                res = urllib.request.urlopen(req, timeout=10)
+                logger.info(f"✓ Real ticket passcard delivered via Resend API to: {to_email} (HTTP {res.status})")
+                return
+            except Exception as e:
+                logger.error(f"Resend delivery attempt error: {e}. Falling back to SMTP...")
+
+        # Check if SMTP (e.g. Gmail) is configured
         smtp_host = settings.SMTP_HOST or os.getenv("SMTP_HOST", "")
         smtp_user = settings.SMTP_USER or os.getenv("SMTP_USER", "")
         smtp_password = settings.SMTP_PASSWORD or os.getenv("SMTP_PASSWORD", "")
         smtp_port = int(settings.SMTP_PORT or os.getenv("SMTP_PORT", 587))
         smtp_from = settings.SMTP_FROM_EMAIL or os.getenv("SMTP_FROM_EMAIL", smtp_user or "tickets@lumina.live")
-        smtp_from_name = settings.SMTP_FROM_NAME or os.getenv("SMTP_FROM_NAME", "Lumina Ticket Engine")
         smtp_tls = settings.SMTP_TLS
 
-        if not smtp_host:
+        if not smtp_host or not smtp_user or not smtp_password:
             logger.info("=" * 60)
-            logger.info(f"[EMAIL DISPATCHED] To: {to_email}")
-            logger.info(f"[EMAIL DISPATCHED] Subject: {subject}")
-            logger.info(f"[EMAIL DISPATCHED] Status: Delivered to local archive & logged (Configure SMTP_HOST in .env for live Gmail delivery)")
-            logger.info(f"[EMAIL DISPATCHED] Local File: {EMAILS_DIR / f'{ref_slug}.html'}")
+            logger.info(f"[EMAIL NOTIFICATION DISPATCHED]")
+            logger.info(f"Recipient: {to_email}")
+            logger.info(f"Subject: {subject}")
+            logger.info(f"Status: Ticket & QR generated and archived in database & local storage.")
+            logger.info(f"Notice: To receive live Gmail emails, add SMTP_USER & SMTP_PASSWORD (or RESEND_API_KEY) in Render Environment Variables.")
             logger.info("=" * 60)
             return
 
