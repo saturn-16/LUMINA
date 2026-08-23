@@ -52,6 +52,8 @@ class EmailService:
                 import urllib.request
                 import urllib.error
 
+                import base64
+
                 from_sender = os.getenv("RESEND_FROM_EMAIL", "Lumina Tickets <onboarding@resend.dev>")
                 resend_payload = {
                     "from": from_sender,
@@ -59,6 +61,14 @@ class EmailService:
                     "subject": subject,
                     "html": html_content,
                 }
+                if qr_png_bytes:
+                    clean_ref = (booking_reference or "admission").replace("#", "").strip()
+                    resend_payload["attachments"] = [
+                        {
+                            "filename": f"{clean_ref}_entry_qr.png",
+                            "content": list(qr_png_bytes) if isinstance(qr_png_bytes, (list, tuple)) else [b for b in qr_png_bytes],
+                        }
+                    ]
                 req = urllib.request.Request(
                     "https://api.resend.com/emails",
                     data=json.dumps(resend_payload).encode("utf-8"),
@@ -162,8 +172,11 @@ class EmailService:
         # Format INR currency
         formatted_price = f"₹{round(total_amount):,}" if total_amount >= 0 else "₹0"
 
-        # Use CID image reference if bytes provided, fallback to data URI
-        qr_src = "cid:ticketqr" if qr_png_bytes else qr_code_data_uri
+        # Universal HTTPS QR code URL that renders natively in Gmail, Outlook, Apple Mail
+        import urllib.parse
+        clean_ref = (booking_reference or "PASS").replace("#", "").strip()
+        encoded_data = urllib.parse.quote(f"LUMINA-PASS|{clean_ref}|{event_title}")
+        qr_src = f"https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=8&data={encoded_data}"
 
         html_content = f"""<!DOCTYPE html>
 <html>
@@ -353,7 +366,7 @@ class EmailService:
             <div class="qr-card">
                 <div class="qr-title">Admission QR Code</div>
                 <div class="qr-subtitle">Scan at venue turnstile or box office for entry</div>
-                <img src="{qr_src}" alt="Entry QR Pass" class="qr-image" />
+                <img src="{qr_src}" alt="Admission QR Pass" width="200" height="200" style="display:block; margin: 16px auto; width: 200px; height: 200px; border-radius: 8px; border: 1px solid #e4e4e7;" />
                 <p style="margin: 12px 0 0; font-family: monospace; font-size: 12px; color: #09090b; font-weight: bold;">
                     #{booking_reference}
                 </p>
