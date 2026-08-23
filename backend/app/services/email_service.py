@@ -65,6 +65,7 @@ class EmailService:
                     headers={
                         "Authorization": f"Bearer {resend_api_key}",
                         "Content-Type": "application/json",
+                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Lumina/1.0",
                     },
                 )
                 res = urllib.request.urlopen(req, timeout=10)
@@ -471,6 +472,7 @@ class EmailService:
                     headers={
                         "Authorization": f"Bearer {resend_api_key}",
                         "Content-Type": "application/json",
+                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Lumina/1.0",
                     },
                 )
                 res = urllib.request.urlopen(req, timeout=10)
